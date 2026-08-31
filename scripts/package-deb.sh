@@ -35,6 +35,16 @@ mkdir -p "$package_root/DEBIAN" "$DIST_DIR"
 cp -a "$STAGE_ROOT"/. "$package_root"/
 install -m 0755 "$SCRIPT_DIR/install-rime-ice.sh" \
   "$package_root/usr/local/bin/rime-ready-install-ice"
+mkdir -p "$package_root/usr/local/share/rime-ready"
+cat >"$package_root/usr/local/share/rime-ready/build-info" <<EOF
+rime_version=$RIME_VERSION
+librime_ref=$LIBRIME_REF
+librime_lua_ref=$LIBRIME_LUA_REF
+librime_octagram_ref=$LIBRIME_OCTAGRAM_REF
+RIME_ICE_RELEASE=$RIME_ICE_RELEASE
+RIME_ICE_ASSET_ID=$RIME_ICE_ASSET_ID
+RIME_ICE_SHA256=$RIME_ICE_SHA256
+EOF
 
 cat >"$package_root/DEBIAN/control" <<EOF
 Package: $package_name

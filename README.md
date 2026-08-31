@@ -82,6 +82,14 @@ dist/SHA256SUMS-*
 scripts/build.sh --target ubuntu-22.04 --clean
 ```
 
+发布前的完整检查统一由 CT 脚本执行：
+
+```bash
+scripts/ct.sh --target ubuntu-22.04
+```
+
+CT 会编译固定版本的上游源码，运行 librime 单元测试，检查动态库依赖，生成 deb，在当前测试环境安装 deb，最后下载并部署一次雾凇拼音。Release Workflow 只有在 CT 全部通过后才会发布产物。
+
 ## 只安装或更新雾凇拼音
 
 Fcitx5：
@@ -100,8 +108,23 @@ scripts/install-rime-ice.sh --frontend ibus
 
 ## GitHub Actions
 
-- `build.yml`：在每次 push、Pull Request 和手动触发时构建并上传 CI 产物。
-- `release.yml`：推送 `v*` Tag 时构建、测试并发布 deb、tar.gz 和校验文件。
+- `build.yml`：在每次 push、Pull Request 和手动触发时运行完整 CT，并上传测试通过的安装包。
+- `release.yml`：推送 `v*` Tag 或在 Actions 页面手动触发时运行完整 CT，全部通过后发布 deb、tar.gz 和校验文件。
+- `upstream-watch.yml`：每周一轮询一次上游；发现新版后更新固定版本、运行 CT，并创建或更新升级 PR。
+
+手动触发 Release 时可以不填写 Tag。Workflow 会按以下格式自动生成：
+
+```text
+v<RIME_VERSION>-r<PACKAGE_REVISION>
+```
+
+例如：
+
+```text
+v1.17.0-r1
+```
+
+如果自动生成的 Tag 已存在，需要更新 `PACKAGE_REVISION`，或者手动填写另一个以 `v` 开头的 Tag。
 
 工作流使用 Matrix 描述目标平台。目前只有：
 
@@ -111,6 +134,19 @@ scripts/install-rime-ice.sh --frontend ibus
 ```
 
 增加新系统时，需要新增 `platforms/<target>/`，再把目标加入 Matrix。平台差异留在平台目录，通用的下载、编译、测试和打包流程继续使用 `scripts/`。
+
+### 上游版本记录
+
+仓库使用两个文件记录上游状态：
+
+- `versions.env`：下一次构建使用的 librime Release、插件提交，以及雾凇 `full.zip` 的 Asset ID 和 SHA-256。
+- `upstream-state.json`：最近一次成功发布的 rime-ready Release 实际包含的上游版本。雾凇的 `nightly` Tag 长期不变，因此还会比较压缩包 Asset ID 和 SHA-256。
+
+每周轮询以 `upstream-state.json` 为基准。发现新版本后不会直接发布未经审查的安装包，而是先运行 CT 并创建升级 PR。Release 发布成功后，Workflow 才把本次发布信息写回 `upstream-state.json`；如果发布失败，记录不会提前更新。
+
+也可以在 Actions 页面手动运行 `Watch upstream releases`，立即检查上游。
+
+这些 Workflow 需要仓库的 Actions 权限允许写入 Contents 和创建 Pull Request。如果启用了 `main` 分支保护，需要允许 Release Workflow 写回 `upstream-state.json`，或者为该步骤配置具有相应权限的规则。
 
 ## 卸载
 

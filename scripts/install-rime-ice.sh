@@ -2,6 +2,17 @@
 # Install Rime Ice into the current user's Rime directory.
 set -euo pipefail
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+if [[ -f $SCRIPT_DIR/../versions.env ]]; then
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/../versions.env"
+elif [[ -f /usr/local/share/rime-ready/build-info ]]; then
+  # shellcheck disable=SC1091
+  source /usr/local/share/rime-ready/build-info
+fi
+RIME_ICE_RELEASE=${RIME_ICE_RELEASE:-nightly}
+RIME_ICE_SHA256=${RIME_ICE_SHA256:-}
+
 frontend=fcitx5
 with_gram=0
 start_frontend=1
@@ -56,8 +67,14 @@ done
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-ice_url=${RIME_ICE_URL:-https://github.com/iDvel/rime-ice/releases/latest/download/full.zip}
+ice_url=${RIME_ICE_URL:-https://github.com/iDvel/rime-ice/releases/download/$RIME_ICE_RELEASE/full.zip}
 curl -L --fail --retry 3 "$ice_url" -o "$tmp/rime-ice.zip"
+if [[ -n $RIME_ICE_SHA256 ]]; then
+  echo "$RIME_ICE_SHA256  $tmp/rime-ice.zip" | sha256sum --check --status || {
+    echo "雾凇拼音压缩包校验失败。" >&2
+    exit 1
+  }
+fi
 unzip -q "$tmp/rime-ice.zip" -d "$tmp/new-rime"
 
 timestamp=$(date +%Y%m%d-%H%M%S)

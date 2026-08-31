@@ -3,12 +3,18 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional release tag; defaults to v<RIME_VERSION>-r<PACKAGE_REVISION>'
+        required: false
+        type: string
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  ct:
     strategy:
       fail-fast: false
       matrix:
@@ -18,13 +24,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build and test
-        run: |
-          scripts/build.sh --target "${{ matrix.target }}"
-          scripts/test-build.sh "${{ matrix.target }}"
-          scripts/package-deb.sh --target "${{ matrix.target }}" --reuse-build
-          scripts/test-deb.sh
-      - name: Upload release assets
+      - name: Run release CT
+        run: scripts/ct.sh --target "${{ matrix.target }}"
+      - name: Upload tested release assets
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target }}
@@ -35,21 +37,67 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: build
+    needs: ct
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           pattern: release-*
           path: dist
           merge-multiple: true
+      - name: Determine release tag
+        id: release
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            tag="$GITHUB_REF_NAME"
+          elif [[ -n "$INPUT_TAG" ]]; then
+            tag="$INPUT_TAG"
+          else
+            source versions.env
+            tag="v${RIME_VERSION}-r${PACKAGE_REVISION}"
+          fi
+          [[ "$tag" == v* ]] || { echo "Tag must start with v: $tag" >&2; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Create tag for manual release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          if git rev-parse "$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG" >&2
+            exit 1
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag -a "$TAG" -m "Release $TAG" "$GITHUB_SHA"
+          git push origin "$TAG"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --verify-tag
+            gh release create "$TAG" dist/* --generate-notes --verify-tag
+          fi
+      - name: Record successfully published upstream revisions
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          scripts/update-release-state.sh "$TAG" /tmp/upstream-state.json
+          git fetch origin main
+          git checkout -B release-state origin/main
+          cp /tmp/upstream-state.json upstream-state.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add upstream-state.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record upstream state for $TAG"
+            git push origin HEAD:main
           fi

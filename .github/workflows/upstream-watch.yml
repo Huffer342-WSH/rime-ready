@@ -1,0 +1,51 @@
+name: Watch upstream releases
+
+on:
+  schedule:
+    # Every Monday at 03:23 UTC.
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check upstream
+        id: upstream
+        run: |
+          result=$(scripts/check-upstream.sh --update)
+          echo "$result"
+          echo "$result" >> "$GITHUB_OUTPUT"
+      - name: Run full CT for updated revisions
+        if: steps.upstream.outputs.version_file_changed == 'true'
+        run: scripts/ct.sh --target ubuntu-22.04
+      - name: Create or update upstream PR
+        if: steps.upstream.outputs.version_file_changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch=automation/upstream-update
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git checkout -B "$branch"
+          git add versions.env
+          git commit -m "Update pinned Rime upstream revisions"
+          git push --force-with-lease origin "$branch"
+          if gh pr list --head "$branch" --state open --json number --jq 'length' | grep -q '^0$'; then
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "Update pinned Rime upstream revisions" \
+              --body "Weekly upstream polling found new revisions. Full CT passed before this PR was created."
+          fi
+      - name: Report release pending
+        if: steps.upstream.outputs.pending_release == 'true'
+        run: |
+          echo '::notice::Pinned versions already match upstream, but upstream-state.json still waits for a successful rime-ready release.'

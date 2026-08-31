@@ -10,6 +10,8 @@ lib_dir="$STAGE_ROOT/usr/local/lib"
 bin_dir="$STAGE_ROOT/usr/local/bin"
 plugin_dir="$lib_dir/rime-plugins"
 
+ctest --test-dir "$LIBRIME_SOURCE/build" --output-on-failure
+
 [[ -f $lib_dir/librime.so.$RIME_VERSION ]]
 [[ $(readlink "$lib_dir/librime.so.1") == "librime.so.$RIME_VERSION" ]]
 for plugin in lua octagram; do

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "last_successful_release": null,
+  "upstream": {
+    "librime": {
+      "release": "1.17.0",
+      "commit": "33e78140250125871856cdc5b42ddc6a5fcd3cd4"
+    },
+    "librime_lua": {
+      "ref": "master",
+      "commit": "ec52e48ea18f11af37717a01c337f853215cf70b"
+    },
+    "librime_lua_thirdparty": {
+      "ref": "thirdparty",
+      "commit": "fa40fadd8af1e5b1fbd55703ccbd54476956d74c"
+    },
+    "librime_octagram": {
+      "ref": "master",
+      "commit": "57d18b9f58e5284bd891d559f6bdd16cf60341e9"
+    },
+    "rime_ice": {
+      "release": "nightly",
+      "asset_id": 537776331,
+      "sha256": "5928a614990991ea46174cb7eecb330f8f0b9582e7a8a6107cfaf185ccdc6132"
+    }
+  }
+}

@@ -11,6 +11,7 @@ libicu-dev
 unzip
 dpkg-dev
 fakeroot
+shellcheck
 fcitx5
 fcitx5-rime
 rime-data-luna-pinyin
