@@ -19,9 +19,9 @@
       "commit": "57d18b9f58e5284bd891d559f6bdd16cf60341e9"
     },
     "rime_ice": {
-      "release": "nightly",
-      "asset_id": 537776331,
-      "sha256": "5928a614990991ea46174cb7eecb330f8f0b9582e7a8a6107cfaf185ccdc6132"
+      "release": "2026.06.30",
+      "asset_id": 461862575,
+      "sha256": "675d23b070be00e1b800f9a6db033ef98f4493cd5b568ed8aa3b3541769c46ac"
     }
   }
 }

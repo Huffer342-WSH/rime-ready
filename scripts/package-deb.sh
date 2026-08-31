@@ -33,17 +33,12 @@ package_root="$BUILD_ROOT/package-root"
 rm -rf "$package_root"
 mkdir -p "$package_root/DEBIAN" "$DIST_DIR"
 cp -a "$STAGE_ROOT"/. "$package_root"/
-install -m 0755 "$SCRIPT_DIR/install-rime-ice.sh" \
-  "$package_root/usr/local/bin/rime-ready-install-ice"
 mkdir -p "$package_root/usr/local/share/rime-ready"
 cat >"$package_root/usr/local/share/rime-ready/build-info" <<EOF
 rime_version=$RIME_VERSION
 librime_ref=$LIBRIME_REF
 librime_lua_ref=$LIBRIME_LUA_REF
 librime_octagram_ref=$LIBRIME_OCTAGRAM_REF
-RIME_ICE_RELEASE=$RIME_ICE_RELEASE
-RIME_ICE_ASSET_ID=$RIME_ICE_ASSET_ID
-RIME_ICE_SHA256=$RIME_ICE_SHA256
 EOF
 
 cat >"$package_root/DEBIAN/control" <<EOF
@@ -51,13 +46,14 @@ Package: $package_name
 Version: $package_version
 Architecture: $arch
 Maintainer: rime-ready maintainers
-Depends: fcitx5-rime, libboost-regex1.74.0, libicu70, libc6 (>= 2.35), libgcc-s1, libstdc++6, curl, unzip, python3
+Depends: libboost-regex1.74.0, libicu70, libc6 (>= 2.35), libgcc-s1, libstdc++6
 Section: utils
 Priority: optional
 Homepage: https://github.com/Huffer342-WSH/rime-ready
 Description: Modern Rime runtime for Ubuntu 22.04
  Installs a pinned modern librime, librime-lua and librime-octagram under
- /usr/local, plus matching command-line tools and a per-user Rime Ice installer.
+ /usr/local, plus matching command-line tools. It does not modify user input
+ method configuration or require a specific desktop input method frontend.
 EOF
 cat >"$package_root/DEBIAN/postinst" <<'EOF'
 #!/bin/sh

@@ -10,11 +10,12 @@ elif [[ -f /usr/local/share/rime-ready/build-info ]]; then
   # shellcheck disable=SC1091
   source /usr/local/share/rime-ready/build-info
 fi
-RIME_ICE_RELEASE=${RIME_ICE_RELEASE:-nightly}
+RIME_ICE_RELEASE=${RIME_ICE_RELEASE:-2026.06.30}
 RIME_ICE_SHA256=${RIME_ICE_SHA256:-}
 
 frontend=fcitx5
 with_gram=0
+activate_frontend=1
 start_frontend=1
 while (($#)); do
   case $1 in
@@ -26,15 +27,20 @@ while (($#)); do
       with_gram=1
       shift
       ;;
+    --no-activate)
+      activate_frontend=0
+      start_frontend=0
+      shift
+      ;;
     --no-start)
       start_frontend=0
       shift
       ;;
     -h | --help)
       cat <<'EOF'
-用法：rime-ready-install-ice [--frontend fcitx5|ibus] [--with-gram] [--no-start]
+用法：scripts/install-rime-ice.sh [--frontend fcitx5|ibus] [--with-gram] [--no-activate] [--no-start]
 
-默认安装雾凇拼音到 Fcitx5；--with-gram 同时安装万象语法模型。
+安装稳定版雾凇拼音。默认显式设置并启动对应输入法；--no-activate 只安装方案。
 EOF
       exit 0
       ;;
@@ -135,40 +141,10 @@ rm -rf "$rime_dir/build"
 mkdir -p "$rime_dir/build"
 rime_deployer --build "$rime_dir" "$shared_dir" "$rime_dir/build"
 
-cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}
-mkdir -p "$cache_dir"
-if [[ $frontend == fcitx5 ]]; then
-  profile=${XDG_CONFIG_HOME:-$HOME/.config}/fcitx5/profile
-  mkdir -p "$(dirname "$profile")"
-  python3 - "$profile" <<'PY'
-from pathlib import Path
-import re
-import sys
-
-path = Path(sys.argv[1])
-if not path.exists():
-    text = """[Groups/0]\nName=Default\nDefault Layout=us\nDefaultIM=rime\n\n[Groups/0/Items/0]\nName=keyboard-us\nLayout=\n\n[Groups/0/Items/1]\nName=rime\nLayout=\n\n[GroupOrder]\n0=Default\n"""
-else:
-    text = path.read_text()
-    if re.search(r"(?m)^DefaultIM=", text):
-        text = re.sub(r"(?m)^DefaultIM=.*$", "DefaultIM=rime", text, count=1)
-    else:
-        text = text.replace("[Groups/0]", "[Groups/0]\nDefaultIM=rime", 1)
-    if not re.search(r"(?m)^Name=rime$", text):
-        indexes = [int(x) for x in re.findall(r"\[Groups/0/Items/(\d+)\]", text)]
-        item = max(indexes, default=-1) + 1
-        block = f"[Groups/0/Items/{item}]\nName=rime\nLayout=\n\n"
-        text = text.replace("[GroupOrder]", block + "[GroupOrder]", 1)
-path.write_text(text)
-PY
-  if command -v im-config >/dev/null; then
-    im-config -n fcitx5 || true
-  fi
-  if ((start_frontend)); then
-    nohup /usr/bin/fcitx5 -d >"$cache_dir/rime-ready-fcitx5.log" 2>&1 &
-  fi
-elif ((start_frontend)); then
-  nohup ibus-daemon -drx >"$cache_dir/rime-ready-ibus.log" 2>&1 &
+if ((activate_frontend)); then
+  configure_args=(--frontend "$frontend")
+  ((start_frontend)) || configure_args+=(--no-start)
+  "$SCRIPT_DIR/configure-input-method.sh" "${configure_args[@]}"
 fi
 
 [[ -f $rime_dir/build/rime_ice.schema.yaml ]] || {

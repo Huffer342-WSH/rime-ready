@@ -1,6 +1,6 @@
 # rime-ready
 
-`rime-ready` 为旧版 Linux 发行版补齐现代 Rime 运行环境，并安装可直接使用的输入方案。项目当前支持 Ubuntu 22.04，后续可以通过新增平台配置和 CI Matrix 支持其他 Ubuntu、Debian、Fedora 等系统。
+`rime-ready` 为旧版 Linux 发行版补齐现代 Rime 运行环境，并提供独立的输入方案配置脚本。项目当前支持 Ubuntu 22.04，后续可以通过新增平台配置和 CI Matrix 支持其他 Ubuntu、Debian、Fedora 等系统。
 
 当前构建并安装：
 
@@ -8,8 +8,8 @@
 - 最新固定提交的 librime-lua
 - 最新固定提交的 librime-octagram
 - 与新版 librime 匹配的命令行工具
-- Fcitx5 + Rime
-- 雾凇拼音；可选万象 Gram
+
+输入法前端和用户方案不包含在 deb 中。一键安装脚本可以另外安装、配置雾凇拼音和可选的万象 Gram。
 
 上游版本固定在 [`versions.env`](versions.env)，本地构建和 GitHub Actions 使用相同源码。
 
@@ -43,13 +43,28 @@
 
 ```bash
 sudo apt install ./rime-ready_1.17.0-1~ubuntu22.04_amd64.deb
-rime-ready-install-ice
 ```
 
-启用万象 Gram：
+该 deb 只安装运行库、插件和命令行应用，不依赖 Fcitx5/IBus，不安装用户配置脚本，也不会激活输入法。根据桌面环境另外安装 Ubuntu 官方前端：
 
 ```bash
-rime-ready-install-ice --with-gram
+sudo apt install fcitx5-rime
+# 或
+sudo apt install ibus-rime
+```
+
+如需安装雾凇并设置输入法，请克隆本仓库后显式运行：
+
+```bash
+scripts/install-rime-ice.sh
+# 或
+scripts/install-rime-ice.sh --frontend ibus
+```
+
+只安装方案、不修改当前输入法：
+
+```bash
+scripts/install-rime-ice.sh --no-activate
 ```
 
 系统运行库安装在 `/usr/local`，不会覆盖 APT 在 `/usr/lib` 中管理的文件。动态链接器会优先选择：
@@ -88,7 +103,7 @@ scripts/build.sh --target ubuntu-22.04 --clean
 scripts/ct.sh --target ubuntu-22.04
 ```
 
-CT 会编译固定版本的上游源码，运行 librime 单元测试，检查动态库依赖，生成 deb，在当前测试环境安装 deb，最后下载并部署一次雾凇拼音。Release Workflow 只有在 CT 全部通过后才会发布产物。
+CT 会编译固定版本的上游源码，运行 librime 单元测试，检查动态库依赖，并生成 deb。随后安装 Ubuntu APT 的 `fcitx5-rime` 和 `ibus-rime`，通过 `ldd -r` 验证它们加载 `/usr/local/lib/librime.so.1` 时没有缺失库或未解析符号。最后，CT 用外部脚本部署稳定版雾凇，并编译一个小型 Rime API 测试应用：模拟输入 `nihao`，断言候选包含“你好”，选择候选后断言提交文本也是“你好”。Release Workflow 只有在这些检查全部通过后才会发布产物。
 
 ## 只安装或更新雾凇拼音
 
@@ -105,6 +120,14 @@ scripts/install-rime-ice.sh --frontend ibus
 ```
 
 安装前，脚本会把原配置目录重命名为带时间戳的备份目录。更新雾凇时会保留已有的 `rime_ice.userdb`。
+
+也可以只设置输入法前端，不重新安装方案：
+
+```bash
+scripts/configure-input-method.sh --frontend fcitx5
+# 或
+scripts/configure-input-method.sh --frontend ibus
+```
 
 ## GitHub Actions
 
@@ -140,7 +163,9 @@ v1.17.0-r1
 仓库使用两个文件记录上游状态：
 
 - `versions.env`：下一次构建使用的 librime Release、插件提交，以及雾凇 `full.zip` 的 Asset ID 和 SHA-256。
-- `upstream-state.json`：最近一次成功发布的 rime-ready Release 实际包含的上游版本。雾凇的 `nightly` Tag 长期不变，因此还会比较压缩包 Asset ID 和 SHA-256。
+- `upstream-state.json`：最近一次成功发布的 rime-ready Release 实际包含的上游版本。稳定版雾凇还会记录压缩包 Asset ID 和 SHA-256。
+
+自动轮询只跟踪 librime 的正式 Release，以及雾凇形如 `YYYY.MM.DD` 的稳定 Release。`librime-lua` 和 `librime-octagram` 没有稳定 Release/稳定分支，因此只固定已验证提交，不自动跟踪它们的 `master`。
 
 每周轮询以 `upstream-state.json` 为基准。发现新版本后不会直接发布未经审查的安装包，而是先运行 CT 并创建升级 PR。Release 发布成功后，Workflow 才把本次发布信息写回 `upstream-state.json`；如果发布失败，记录不会提前更新。
 

@@ -17,8 +17,7 @@ rm -f \
   /usr/local/bin/rime_deployer \
   /usr/local/bin/rime_dict_manager \
   /usr/local/bin/rime_patch \
-  /usr/local/bin/rime_table_decompiler \
-  /usr/local/bin/rime-ready-install-ice
+  /usr/local/bin/rime_table_decompiler
 rm -rf /usr/local/share/rime-ready
 ldconfig
 printf '已移除 rime-ready 系统运行库；用户词库和配置未删除。\n'

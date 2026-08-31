@@ -9,4 +9,5 @@ deb=$(find "$SCRIPT_DIR/../dist" -maxdepth 1 -name 'rime-ready_*.deb' -printf '%
   exit 1
 }
 sudo apt-get install -y "$deb"
-printf 'Rime 运行库安装完成。下一步运行：rime-ready-install-ice\n'
+printf 'Rime 运行库安装完成；尚未修改或激活输入法。\n'
+printf '如需安装雾凇并设置输入法，请运行：scripts/install-rime-ice.sh\n'

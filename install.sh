@@ -10,4 +10,4 @@ elif (($#)); then
   exit 1
 fi
 "$ROOT/scripts/install-rime.sh"
-/usr/local/bin/rime-ready-install-ice "${with_gram[@]}"
+"$ROOT/scripts/install-rime-ice.sh" "${with_gram[@]}"
