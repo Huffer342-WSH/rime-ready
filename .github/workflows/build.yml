@@ -1,0 +1,41 @@
+name: Build packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: ubuntu-22.04
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell scripts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck install.sh scripts/*.sh scripts/lib/*.sh
+      - name: Build
+        run: scripts/build.sh --target "${{ matrix.target }}"
+      - name: Test build
+        run: scripts/test-build.sh "${{ matrix.target }}"
+      - name: Package
+        run: scripts/package-deb.sh --target "${{ matrix.target }}" --reuse-build
+      - name: Test deb and Rime Ice installer
+        run: scripts/test-deb.sh
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: rime-ready-${{ matrix.target }}
+          path: |
+            dist/*.deb
+            dist/*.tar.gz
+            dist/SHA256SUMS-*
+          if-no-files-found: error

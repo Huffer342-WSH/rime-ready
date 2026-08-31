@@ -1,0 +1,16 @@
+ca-certificates
+curl
+git
+build-essential
+cmake
+pkg-config
+python3
+libboost1.74-dev
+libboost-regex1.74-dev
+libicu-dev
+unzip
+dpkg-dev
+fakeroot
+fcitx5
+fcitx5-rime
+rime-data-luna-pinyin
