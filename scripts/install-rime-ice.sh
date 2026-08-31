@@ -6,9 +6,9 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 if [[ -f $SCRIPT_DIR/../versions.env ]]; then
   # shellcheck disable=SC1091
   source "$SCRIPT_DIR/../versions.env"
-elif [[ -f /usr/local/share/rime-ready/build-info ]]; then
+elif [[ -f /usr/share/rime-ready/build-info ]]; then
   # shellcheck disable=SC1091
-  source /usr/local/share/rime-ready/build-info
+  source /usr/share/rime-ready/build-info
 fi
 RIME_ICE_RELEASE=${RIME_ICE_RELEASE:-2026.06.30}
 RIME_ICE_SHA256=${RIME_ICE_SHA256:-}
@@ -85,14 +85,16 @@ unzip -q "$tmp/rime-ice.zip" -d "$tmp/new-rime"
 
 timestamp=$(date +%Y%m%d-%H%M%S)
 backup="${rime_dir}-backup-${timestamp}"
-if [[ $frontend == fcitx5 ]]; then
-  fcitx5-remote -e 2>/dev/null || true
-  for _ in $(seq 1 40); do
-    pgrep -x fcitx5 >/dev/null || break
-    sleep 0.25
-  done
-else
-  ibus exit 2>/dev/null || true
+if ((activate_frontend)); then
+  if [[ $frontend == fcitx5 ]]; then
+    fcitx5-remote -e 2>/dev/null || true
+    for _ in $(seq 1 40); do
+      pgrep -x fcitx5 >/dev/null || break
+      sleep 0.25
+    done
+  else
+    ibus exit 2>/dev/null || true
+  fi
 fi
 
 if [[ -d $rime_dir ]]; then

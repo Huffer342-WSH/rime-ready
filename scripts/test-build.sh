@@ -6,8 +6,9 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/lib/common.sh"
 load_target "${1:-$DEFAULT_TARGET}"
 
-lib_dir="$STAGE_ROOT/usr/local/lib"
-bin_dir="$STAGE_ROOT/usr/local/bin"
+multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+lib_dir="$STAGE_ROOT/usr/lib/$multiarch"
+bin_dir="$STAGE_ROOT/usr/bin"
 plugin_dir="$lib_dir/rime-plugins"
 
 ctest --test-dir "$LIBRIME_SOURCE/build" --output-on-failure

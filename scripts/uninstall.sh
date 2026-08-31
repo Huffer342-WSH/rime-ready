@@ -1,23 +1,14 @@
 #!/usr/bin/env bash
+# Restore Ubuntu 22.04's official Rime packages without deleting user data.
 set -euo pipefail
 
-version=${1:-1.17.0}
+ubuntu_version=1.7.3+dfsg3-2build2
+packages=(librime1 librime-bin librime-plugin-lua librime-plugin-octagram)
 if [[ $EUID -ne 0 ]]; then
   exec sudo "$0" "$@"
 fi
-
-rm -f \
-  "/usr/local/lib/librime.so.$version" \
-  /usr/local/lib/librime.so.1 \
-  /usr/local/lib/librime.so \
-  "/usr/local/lib/rime-plugins/librime-lua.so.$version" \
-  /usr/local/lib/rime-plugins/librime-lua.so \
-  "/usr/local/lib/rime-plugins/librime-octagram.so.$version" \
-  /usr/local/lib/rime-plugins/librime-octagram.so \
-  /usr/local/bin/rime_deployer \
-  /usr/local/bin/rime_dict_manager \
-  /usr/local/bin/rime_patch \
-  /usr/local/bin/rime_table_decompiler
-rm -rf /usr/local/share/rime-ready
-ldconfig
-printf '已移除 rime-ready 系统运行库；用户词库和配置未删除。\n'
+apt-get update
+specs=()
+for package in "${packages[@]}"; do specs+=("$package=$ubuntu_version"); done
+apt-get install -y --allow-downgrades "${specs[@]}"
+printf '已恢复 Ubuntu 22.04 官方 Rime 软件包；用户词库和配置未删除。\n'

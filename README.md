@@ -21,31 +21,58 @@
 ./install.sh
 ```
 
-同时安装万象语法模型：
+默认从最新 GitHub Release 下载并校验四个标准 deb，然后使用 `ice` 预设：安装 Ubuntu 的 Fcitx5 Rime 前端、安装稳定版雾凇、编译方案、设置并启动输入法。常用预设：
 
 ```bash
-./install.sh --with-gram
+./install.sh --preset runtime-only  # 只安装运行库和命令行应用
+./install.sh --preset ice           # Fcitx5 + 雾凇（默认）
+./install.sh --preset ice-gram      # Fcitx5 + 雾凇 + 万象 Gram
+./install.sh --preset ice --frontend ibus
 ```
 
-脚本会依次执行：
+用户配置控制：
 
-1. 安装编译依赖；
-2. 编译 librime、Lua 和 Octagram；
-3. 生成并安装 deb；
-4. 安装雾凇拼音到当前用户的 Fcitx5 Rime 目录；
-5. 编译方案并启动 Fcitx5。
+```bash
+./install.sh --preset ice --no-activate  # 安装方案但不修改输入法设置
+./install.sh --preset ice --no-start     # 设置输入法但不立即启动前端
+```
 
-脚本需要通过 `sudo` 安装系统依赖和 deb，但不会用 root 身份修改用户的 Rime 配置。
+需要本机编译时显式使用：
+
+```bash
+./install.sh --build --preset ice
+```
+
+也可以安装指定的本地或远程 deb：
+
+```bash
+./install.sh --deb ./dist --preset runtime-only
+./install.sh --deb https://example.com/librime1.deb \
+  --deb https://example.com/librime-bin.deb \
+  --deb https://example.com/librime-plugin-lua.deb \
+  --deb https://example.com/librime-plugin-octagram.deb --preset ice
+```
+
+脚本只通过 `sudo` 安装 APT 软件包和 deb；用户目录中的 Rime 配置始终以当前桌面用户身份修改。
 
 ## 使用预编译 deb
 
-从 GitHub Release 下载适用于 Ubuntu 22.04 的 deb，然后执行：
+Release 提供四个与 Ubuntu 22.04 同名、职责相同但版本更高的软件包：
 
-```bash
-sudo apt install ./rime-ready_1.17.0-1~ubuntu22.04_amd64.deb
+```text
+librime1
+librime-bin
+librime-plugin-lua
+librime-plugin-octagram
 ```
 
-该 deb 只安装运行库、插件和命令行应用，不依赖 Fcitx5/IBus，不安装用户配置脚本，也不会激活输入法。根据桌面环境另外安装 Ubuntu 官方前端：
+把四个 deb 放在同一目录后执行：
+
+```bash
+sudo apt install ./*.deb
+```
+
+APT 会把它们视为 Jammy 对应软件包的升级版本。它们不依赖 Fcitx5/IBus，不安装用户配置脚本，也不会激活输入法。根据桌面环境另外安装 Ubuntu 官方前端：
 
 ```bash
 sudo apt install fcitx5-rime
@@ -67,13 +94,26 @@ scripts/install-rime-ice.sh --frontend ibus
 scripts/install-rime-ice.sh --no-activate
 ```
 
-系统运行库安装在 `/usr/local`，不会覆盖 APT 在 `/usr/lib` 中管理的文件。动态链接器会优先选择：
+软件包使用 Ubuntu 标准路径：
 
 ```text
-/usr/local/lib/librime.so.1
-/usr/local/lib/rime-plugins/librime-lua.so
-/usr/local/lib/rime-plugins/librime-octagram.so
+/usr/lib/x86_64-linux-gnu/librime.so.1
+/usr/lib/x86_64-linux-gnu/rime-plugins/librime-lua.so
+/usr/lib/x86_64-linux-gnu/rime-plugins/librime-octagram.so
+/usr/bin/rime_deployer
 ```
+
+这些文件都由 `dpkg` 记录所有权。`apt update` 和 `apt upgrade` 会正常工作，并且不会因为 Jammy 仓库中的 1.7.3 版本较旧而自动降级。
+
+## 安装职责
+
+完整的 Fcitx5 雾凇安装由三部分组成：
+
+1. **Ubuntu APT**：安装 `fcitx5-rime` 或 `ibus-rime` 输入法前端，以及 Boost、ICU、glibc 等动态依赖。
+2. **rime-ready 生成的标准 deb**：以更高版本升级 Ubuntu 的 `librime1`、`librime-bin`、`librime-plugin-lua` 和 `librime-plugin-octagram`，使用 `/usr/lib`、`/usr/bin` 等标准路径。deb 不包含用户配置脚本，也不激活输入法。
+3. **仓库脚本**：下载和校验四个 deb，选择输入法前端，安装稳定版雾凇或万象 Gram，编译用户方案，并在用户明确选择时修改 Fcitx5/IBus 配置和启动前端。
+
+需要回退时，`scripts/uninstall.sh` 会使用 `apt --allow-downgrades` 恢复 Ubuntu 22.04 官方版本，而不是手工删除库文件。
 
 ## 分步构建
 
@@ -87,7 +127,6 @@ scripts/package-deb.sh --target ubuntu-22.04 --reuse-build
 
 ```text
 dist/*.deb
-dist/*.tar.gz
 dist/SHA256SUMS-*
 ```
 
@@ -103,7 +142,17 @@ scripts/build.sh --target ubuntu-22.04 --clean
 scripts/ct.sh --target ubuntu-22.04
 ```
 
-CT 会编译固定版本的上游源码，运行 librime 单元测试，检查动态库依赖，并生成 deb。随后安装 Ubuntu APT 的 `fcitx5-rime` 和 `ibus-rime`，通过 `ldd -r` 验证它们加载 `/usr/local/lib/librime.so.1` 时没有缺失库或未解析符号。最后，CT 用外部脚本部署稳定版雾凇，并编译一个小型 Rime API 测试应用：模拟输入 `nihao`，断言候选包含“你好”，选择候选后断言提交文本也是“你好”。Release Workflow 只有在这些检查全部通过后才会发布产物。
+本地可使用预装好 APT 依赖的复用容器，避免每次从 `ubuntu:22.04` 重新准备环境：
+
+```bash
+scripts/docker-ct.sh --target ubuntu-22.04
+scripts/docker-ct.sh --reuse-build       # 复用已有编译目录
+scripts/docker-ct.sh --rebuild-image     # 仅在基础依赖变化时重建镜像
+```
+
+默认镜像名为 `rime-ready-ubuntu22-ct:local`，可通过 `RIME_READY_CT_IMAGE` 覆盖。
+
+CT 会编译固定版本的上游源码，运行 librime 单元测试，检查动态库依赖，生成四个标准 deb，并以 Lintian error 作为失败条件。随后安装 Ubuntu APT 的 `fcitx5-rime` 和 `ibus-rime`，通过 `ldd -r` 验证它们加载 `/usr/lib/x86_64-linux-gnu/librime.so.1` 时没有缺失库或未解析符号。最后，CT 用外部脚本部署稳定版雾凇，并编译一个小型 Rime API 测试应用：模拟输入 `nihao`，断言候选包含“你好”，选择候选后断言提交文本也是“你好”。Release Workflow 只有在这些检查全部通过后才会发布产物。
 
 ## 只安装或更新雾凇拼音
 
@@ -131,9 +180,9 @@ scripts/configure-input-method.sh --frontend ibus
 
 ## GitHub Actions
 
-- `build.yml`：在每次 push、Pull Request 和手动触发时运行完整 CT，并上传测试通过的安装包。
-- `release.yml`：推送 `v*` Tag 或在 Actions 页面手动触发时运行完整 CT，全部通过后发布 deb、tar.gz 和校验文件。
-- `upstream-watch.yml`：每周一轮询一次上游；发现新版后更新固定版本、运行 CT，并创建或更新升级 PR。
+- `build.yml`：普通 `main` Push 会运行 CT；PR 不自动运行。需要测试 PR 时，在 Actions 页面手动运行 `Continuous test` 并填写 PR 编号。该 Workflow 只上传 CI 产物，永不发布版本。
+- `release.yml`：推送 `v*` Tag 或在 Actions 页面手动触发时运行完整 CT，全部通过后发布四个 deb 和校验文件。
+- `upstream-watch.yml`：每周一轮询稳定上游 Release。发现新版后直接更新 `main` 的固定版本并调度 `release.yml`，不创建 PR。Release Workflow 仍需完整 CT 通过才会发布。
 
 手动触发 Release 时可以不填写 Tag。Workflow 会按以下格式自动生成：
 
@@ -167,30 +216,24 @@ v1.17.0-r1
 
 自动轮询只跟踪 librime 的正式 Release，以及雾凇形如 `YYYY.MM.DD` 的稳定 Release。`librime-lua` 和 `librime-octagram` 没有稳定 Release/稳定分支，因此只固定已验证提交，不自动跟踪它们的 `master`。
 
-每周轮询以 `upstream-state.json` 为基准。发现新版本后不会直接发布未经审查的安装包，而是先运行 CT 并创建升级 PR。Release 发布成功后，Workflow 才把本次发布信息写回 `upstream-state.json`；如果发布失败，记录不会提前更新。
+每周轮询以 `upstream-state.json` 为基准。发现新版本后会更新 `versions.env` 并调度 Release Workflow；只有完整 CT 通过后才发布。Release 发布成功后，Workflow 才把本次发布信息写回 `upstream-state.json`；如果构建、输入输出测试或发布失败，成功状态不会提前更新。
 
 也可以在 Actions 页面手动运行 `Watch upstream releases`，立即检查上游。
 
-这些 Workflow 需要仓库的 Actions 权限允许写入 Contents 和创建 Pull Request。如果启用了 `main` 分支保护，需要允许 Release Workflow 写回 `upstream-state.json`，或者为该步骤配置具有相应权限的规则。
+周期更新和 Release Workflow 需要仓库的 Actions 权限允许写入 Contents 和调度 Workflow。如果启用了 `main` 分支保护，需要允许它们更新 `versions.env` 和 `upstream-state.json`。
 
 ## 卸载
 
-如果通过 deb 安装：
-
-```bash
-sudo apt remove rime-ready
-```
-
-源码安装产物也可以使用：
+恢复 Ubuntu 22.04 官方 Rime 软件包：
 
 ```bash
 scripts/uninstall.sh
 ```
 
-卸载系统运行库不会删除 `~/.local/share/fcitx5/rime` 中的输入方案和用户词库。
+恢复系统运行库不会删除 `~/.local/share/fcitx5/rime` 中的输入方案和用户词库。
 
 ## 说明
 
 Ubuntu 22.04 自带 librime 1.7.3。新版雾凇使用的新式 Lua 模块加载方式无法在该版本正常运行，因此本项目成套构建 librime、librime-lua 和 librime-octagram，避免混用不匹配的 ABI。
 
-项目不会修改 `/usr/lib/x86_64-linux-gnu` 中由 APT 管理的文件。
+项目生成的 deb 会通过 APT 正常升级 `/usr/lib/x86_64-linux-gnu` 和 `/usr/bin` 中对应软件包的文件；不会绕过 `dpkg` 手工覆盖这些路径。

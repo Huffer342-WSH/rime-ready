@@ -1,0 +1,18 @@
+#!/bin/sh
+# Compatible helper retained from Ubuntu's librime-bin package.
+# SPDX-License-Identifier: CC0-1.0
+set -e
+RIME_DATA_DIR=/usr/share/rime-data
+case ${1:-} in
+  '') ;;
+  default)
+    for file in "$RIME_DATA_DIR"/*.*; do
+      [ ! -f "$file" ] || ln -sf "$file" .
+    done
+    for schema in ./*.schema.yaml; do
+      [ ! -f "$schema" ] || rime_deployer --compile "$schema"
+    done
+    find . -maxdepth 1 -type l -delete
+    ;;
+  *) echo "用法：debian-rime-processor [default]" >&2; exit 1 ;;
+esac

@@ -3,8 +3,15 @@ name: Continuous test
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Optional PR number to test; leave empty to test the selected ref'
+        required: false
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   ct:
@@ -17,6 +24,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number != '' && format('refs/pull/{0}/merge', inputs.pr_number) || github.ref }}
       - name: Run full CT
         run: scripts/ct.sh --target "${{ matrix.target }}"
       - name: Upload tested packages
@@ -25,6 +34,5 @@ jobs:
           name: rime-ready-${{ matrix.target }}
           path: |
             dist/*.deb
-            dist/*.tar.gz
             dist/SHA256SUMS-*
           if-no-files-found: error

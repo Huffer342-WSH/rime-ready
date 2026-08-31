@@ -90,9 +90,12 @@ PY
 make -C "$LIBRIME_SOURCE" deps
 
 log "编译 Rime $RIME_VERSION、Lua 和 Octagram"
+multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+install_libdir="lib/$multiarch"
 rm -rf "$LIBRIME_SOURCE/build" "$STAGE_ROOT"
 cmake -S "$LIBRIME_SOURCE" -B "$LIBRIME_SOURCE/build" \
-  -DCMAKE_INSTALL_PREFIX=/usr/local \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DCMAKE_INSTALL_LIBDIR="$install_libdir" \
   -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_TEST=ON \
   -DBUILD_MERGED_PLUGINS=OFF \
@@ -106,18 +109,19 @@ cmake --build "$LIBRIME_SOURCE/build" --parallel "$(nproc)"
 DESTDIR="$STAGE_ROOT" cmake --install "$LIBRIME_SOURCE/build"
 # The release package is a runtime package, not an SDK.
 rm -rf \
-  "$STAGE_ROOT/usr/local/include" \
-  "$STAGE_ROOT/usr/local/lib/pkgconfig" \
-  "$STAGE_ROOT/usr/local/share/cmake"
+  "$STAGE_ROOT/usr/include" \
+  "$STAGE_ROOT/usr/lib/$multiarch/pkgconfig" \
+  "$STAGE_ROOT/usr/lib/$multiarch/cmake" \
+  "$STAGE_ROOT/usr/share/cmake"
 
-plugin_dir="$STAGE_ROOT/usr/local/lib/rime-plugins"
+plugin_dir="$STAGE_ROOT/usr/lib/$multiarch/rime-plugins"
 for plugin in lua octagram; do
   mv "$plugin_dir/librime-$plugin.so" "$plugin_dir/librime-$plugin.so.$RIME_VERSION"
   ln -s "librime-$plugin.so.$RIME_VERSION" "$plugin_dir/librime-$plugin.so"
 done
 
-install -d "$STAGE_ROOT/usr/local/share/rime-ready"
-cat >"$STAGE_ROOT/usr/local/share/rime-ready/build-info" <<EOF
+install -d "$STAGE_ROOT/usr/share/rime-ready"
+cat >"$STAGE_ROOT/usr/share/rime-ready/build-info" <<EOF
 platform=$PLATFORM_ID
 rime_version=$RIME_VERSION
 librime_ref=$LIBRIME_REF

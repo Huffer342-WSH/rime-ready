@@ -12,6 +12,7 @@ unzip
 dpkg-dev
 fakeroot
 shellcheck
+lintian
 fcitx5
 fcitx5-rime
 rime-data-luna-pinyin
