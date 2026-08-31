@@ -32,6 +32,7 @@ fi
 
 arch=$(dpkg --print-architecture)
 package_version="$RIME_VERSION-$PACKAGE_REVISION~$DEB_VERSION_SUFFIX"
+file_version=${package_version//\~/.}
 SOURCE_DATE_EPOCH=$(git -c safe.directory="$LIBRIME_SOURCE" -C "$LIBRIME_SOURCE" show -s --format=%ct "$LIBRIME_REF")
 export SOURCE_DATE_EPOCH
 changelog_date=$(date --utc --date="@$SOURCE_DATE_EPOCH" --rfc-email)
@@ -82,7 +83,7 @@ License: BSD-3-clause
  AND ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED.
 EOF
   printf 'rime-ready (%s) jammy; urgency=medium\n\n  * Rebuild pinned modern Rime runtime for Ubuntu 22.04.\n\n -- rime-ready maintainers <noreply@github.com>  %s\n' \
-    "$package_version" "$changelog_date" | gzip -n -9n >"$root/usr/share/doc/$package/changelog.Debian.gz"
+    "$package_version" "$changelog_date" | gzip -9n >"$root/usr/share/doc/$package/changelog.Debian.gz"
 }
 
 core="$package_root/librime1"
@@ -141,7 +142,7 @@ done
 
 outputs=()
 for package in librime1 librime-bin librime-plugin-lua librime-plugin-octagram; do
-  output="$DIST_DIR/${package}_${package_version}_${arch}.deb"
+  output="$DIST_DIR/${package}_${file_version}_${arch}.deb"
   dpkg-deb --root-owner-group --build "$package_root/$package" "$output"
   outputs+=("$output")
 done
