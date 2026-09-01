@@ -101,7 +101,7 @@ apt/
     └── pool/<codename>/
 ```
 
-每个平台在 `platforms/<target>/platform.env` 中声明仓库家族、suite、component 和 architecture。Release Workflow 只在完整 CT 和 GitHub Release 发布成功后更新 `apt-repository` 分支，并使用独立的 APT 密钥生成 `InRelease` 和 `Release.gpg`。GitHub Pages 从该分支发布静态仓库。
+每个平台在 `platforms/<target>/platform.env` 中声明仓库家族、suite、component、architecture 和 Release 文件匹配模式。Release Workflow 只在完整 CT 和 GitHub Release 发布成功后更新 `apt-repository` 分支，并使用独立的 APT 密钥生成 `InRelease` 和 `Release.gpg`。GitHub Pages 从该分支发布静态仓库。私钥通过仓库 Secret `APT_GPG_PRIVATE_KEY` 提供；离线备份不能提交到 Git 仓库。需要从已有 Release 重建仓库时，可手动运行 `Publish APT repository` Workflow。
 
 如需移除软件源但保留已安装软件：
 
