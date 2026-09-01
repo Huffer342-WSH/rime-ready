@@ -10,6 +10,9 @@ libboost-regex1.74-dev
 libicu-dev
 unzip
 dpkg-dev
+apt-utils
+gnupg
+xz-utils
 fakeroot
 shellcheck
 lintian

@@ -21,7 +21,7 @@
 curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | bash
 ```
 
-`install.sh` 已包含下载 deb、源码编译、安装雾凇和设置输入法所需的全部逻辑，不依赖仓库中的 `scripts/` 目录。默认从最新 GitHub Release 下载并校验四个标准 deb，然后使用 `ice` 预设：安装 Ubuntu 的 Fcitx5 Rime 前端、安装稳定版雾凇、编译方案、设置并启动输入法。
+`install.sh` 已包含配置 APT 仓库、下载 deb、源码编译、安装雾凇和设置输入法所需的全部逻辑，不依赖仓库中的 `scripts/` 目录。默认验证并添加 rime-ready 的签名 APT 仓库，通过 APT 安装四个标准 deb，然后使用 `ice` 预设：安装 Ubuntu 的 Fcitx5 Rime 前端、安装稳定版雾凇、编译方案、设置并启动输入法。
 
 给在线脚本传参时，把参数写在 `bash -s --` 后面：
 
@@ -60,6 +60,13 @@ curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/insta
 ./install.sh --preset ice-gram
 ```
 
+需要绕过 APT 仓库、直接从最新 GitHub Release 下载时使用 `--download`：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --download --preset runtime-only
+```
+
 安装指定的本地或远程 deb 时，使用已克隆仓库中的脚本更方便：
 
 ```bash
@@ -72,9 +79,41 @@ curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/insta
 
 脚本只通过 `sudo` 安装 APT 软件包和 deb；用户目录中的 Rime 配置始终以当前桌面用户身份修改。
 
+## APT 仓库
+
+rime-ready 使用 GitHub Pages 发布签名的 APT 仓库。一键脚本会核对仓库公钥指纹，再写入以下软件源：
+
+```text
+deb [arch=amd64 signed-by=/usr/share/keyrings/rime-ready-archive-keyring.gpg] https://huffer342-wsh.github.io/rime-ready/apt/ubuntu jammy main
+```
+
+安装完成后，四个 Rime 软件包会随正常的 `apt update` 和 `apt upgrade` 更新。仓库目录按发行版家族、版本代号和架构组织：
+
+```text
+apt/
+├── ubuntu/
+│   ├── dists/
+│   │   └── jammy/main/binary-amd64/
+│   └── pool/
+│       └── jammy/main/
+└── debian/                  # 后续支持 Debian 时添加
+    ├── dists/<codename>/
+    └── pool/<codename>/
+```
+
+每个平台在 `platforms/<target>/platform.env` 中声明仓库家族、suite、component 和 architecture。Release Workflow 只在完整 CT 和 GitHub Release 发布成功后更新 `apt-repository` 分支，并使用独立的 APT 密钥生成 `InRelease` 和 `Release.gpg`。GitHub Pages 从该分支发布静态仓库。
+
+如需移除软件源但保留已安装软件：
+
+```bash
+sudo rm -f /etc/apt/sources.list.d/rime-ready.list
+sudo rm -f /usr/share/keyrings/rime-ready-archive-keyring.gpg
+sudo apt update
+```
+
 ## 使用预编译 deb
 
-Release 提供四个与 Ubuntu 22.04 同名、职责相同但版本更高的软件包：
+Release 同时提供四个与 Ubuntu 22.04 同名、职责相同但版本更高的软件包：
 
 ```text
 librime1

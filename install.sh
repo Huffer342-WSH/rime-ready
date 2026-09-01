@@ -2,7 +2,7 @@
 # Self-contained installer: suitable for `curl ... | bash`.
 set -euo pipefail
 
-mode=download
+mode=apt
 preset=ice
 frontend=fcitx5
 activate=1
@@ -19,6 +19,8 @@ LIBRIME_OCTAGRAM_REF=57d18b9f58e5284bd891d559f6bdd16cf60341e9
 RIME_ICE_RELEASE=2026.06.30
 RIME_ICE_SHA256=675d23b070be00e1b800f9a6db033ef98f4493cd5b568ed8aa3b3541769c46ac
 PACKAGE_REVISION=1
+APT_REPOSITORY_URL=https://huffer342-wsh.github.io/rime-ready
+APT_KEY_FINGERPRINT=10E0EAB6DBE538C5AD68CEB61C00989B4AE0AEB7
 
 usage() {
   cat <<'EOF'
@@ -27,7 +29,8 @@ usage() {
   ./install.sh [选项]
 
 运行库来源：
-  --download            从最新 GitHub Release 下载四个标准 deb（默认）
+  --apt                 从 rime-ready APT 仓库安装四个标准 deb（默认）
+  --download            从最新 GitHub Release 下载四个标准 deb
   --build               在本机从固定源码编译四个标准 deb
   --deb <目录/文件/URL> 安装指定 deb；可重复使用
 
@@ -54,6 +57,7 @@ log() {
 
 while (($#)); do
   case $1 in
+    --apt) mode=apt; deb_sources=(); shift ;;
     --download) mode=download; deb_sources=(); shift ;;
     --build) mode=build; deb_sources=(); shift ;;
     --deb) mode=deb; deb_sources+=("${2:?--deb 缺少目录、文件或 URL}"); shift 2 ;;
@@ -247,6 +251,26 @@ SH
   done
   verify_debs
   sudo apt-get install -y "${debs[@]}"
+}
+
+install_apt_repository_debs() {
+  local key_file=$tmp/rime-ready-archive-keyring.gpg
+  local source_file=$tmp/rime-ready.list actual_fingerprint
+  sudo apt-get update
+  sudo apt-get install -y ca-certificates curl gnupg
+  curl -fsSL "$APT_REPOSITORY_URL/keys/rime-ready-archive-keyring.gpg" -o "$key_file" ||
+    die "无法下载 rime-ready APT 仓库公钥"
+  actual_fingerprint=$(gpg --batch --show-keys --with-colons "$key_file" |
+    awk -F: '$1 == "fpr" {print $10; exit}')
+  [[ $actual_fingerprint == "$APT_KEY_FINGERPRINT" ]] ||
+    die "APT 仓库公钥指纹不匹配：$actual_fingerprint"
+  sudo install -m 0644 "$key_file" /usr/share/keyrings/rime-ready-archive-keyring.gpg
+  cat >"$source_file" <<EOF
+deb [arch=amd64 signed-by=/usr/share/keyrings/rime-ready-archive-keyring.gpg] $APT_REPOSITORY_URL/apt/ubuntu jammy main
+EOF
+  sudo install -m 0644 "$source_file" /etc/apt/sources.list.d/rime-ready.list
+  sudo apt-get update
+  sudo apt-get install -y "${required_packages[@]}"
 }
 
 download_release_debs() {
@@ -454,6 +478,7 @@ EOF
 }
 
 case $mode in
+  apt) install_apt_repository_debs ;;
   build) build_debs ;;
   download) download_release_debs ;;
   deb) install_given_debs ;;

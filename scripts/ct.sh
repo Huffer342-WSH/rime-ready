@@ -46,6 +46,7 @@ log "运行 Rime 单元测试和产物测试"
 log "生成并安装测试 deb"
 "$SCRIPT_DIR/package-deb.sh" --target "$target" --reuse-build
 lintian --fail-on error "$PROJECT_ROOT/dist"/*.deb
+"$SCRIPT_DIR/test-apt-repository.sh" "$target"
 "$SCRIPT_DIR/test-deb.sh"
 
 log "$target CT 全部通过"
