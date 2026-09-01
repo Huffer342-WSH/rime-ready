@@ -61,7 +61,7 @@ jobs:
             (
               cd /tmp/apt-repository
               git switch --orphan apt-repository
-              git rm -rf .
+              git rm -rf . 2>/dev/null || true
             )
           fi
           scripts/publish-apt-repository.sh \
