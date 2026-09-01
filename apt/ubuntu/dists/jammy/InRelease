@@ -5,42 +5,42 @@ Acquire-By-Hash: yes
 Architectures: amd64
 Codename: jammy
 Components: main
-Date: Tue, 01 Sep 2026 02:59:23 +0000
+Date: Tue, 01 Sep 2026 03:06:55 +0000
 Description: Modern Rime packages for Ubuntu 22.04
 Label: rime-ready
 Origin: rime-ready
 Suite: jammy
 MD5Sum:
- b492730276bcc8c6158cd44d4ea01180              214 Release
+ 8c730919051575a7d2682339b332f088              214 Release
  ce59f502a3663464252ef03b1295bb41             2796 main/binary-amd64/Packages
- bf2ce721f0ca59942480e1676eb04819              874 main/binary-amd64/Packages.gz
+ f29b7afdac7823025b15cbb9d6c3721d              874 main/binary-amd64/Packages.gz
  33dee0bc57d93931350663d05281077d              924 main/binary-amd64/Packages.xz
 SHA1:
- d4098b161c438a13f2e5e6078b65dbad3a2602c5              214 Release
+ b71ba52fe21d2b92ff154714a74fcabf2e65419d              214 Release
  43588acd0ff6960984eaa46276e8aa4955b5fd6a             2796 main/binary-amd64/Packages
- 08011e1d4a642938696ecf6862db989e9b9a3a69              874 main/binary-amd64/Packages.gz
+ c6eb63996309f9647de7d06515d1a68972fbd9fa              874 main/binary-amd64/Packages.gz
  0b090b643166d8b555c1f1f0b88ac8018e894e01              924 main/binary-amd64/Packages.xz
 SHA256:
- ee9306aec4bb1b754a3fc66814efefbc6b5aaf21d83f8de0555ca6e9154bc0a1              214 Release
+ bc347659c252eedd10776650589ba81067c7f0794742597fdeb1d5a078f1e8b6              214 Release
  b3d219a9778f7563b8d1c51a6ddfa560200ba92e3c2cc171b5b19cfe6e9da94d             2796 main/binary-amd64/Packages
- 7ab95a003997787523a0b4469cfc696bb5c79aaa1c07fc338bf22a50ab63fbc9              874 main/binary-amd64/Packages.gz
+ 2ad6e7c9c1751ac19c6ad0cc152967c05a3f5ee6e315cce317f7d17f801d4b22              874 main/binary-amd64/Packages.gz
  7705ec4a2dd7be06f53a62240018897ca546351b642d769df8cbc18e13b741b3              924 main/binary-amd64/Packages.xz
 SHA512:
- 8befbe6adf8f671590c1c9c047f336aa79ff7d6657a8ab07547f1ee060cc1914fff837e3d824238cfd493518c2b162b82a30000264013c86b08b6356587ba815              214 Release
+ 8a08169d7207beca2598c25fd5ba9bc119e0bda1f66c72ad7b49624a0831a9f11a527a5a2d4867de9df2d5a391cbd0305d5a11fde696c46ddd5acaa740313a8b              214 Release
  6babea535c77204be5be6495541b2b85b4c893669e1720746d201f5f470b6fb72ee774b07dc42db19bb3503a591d0af74400200b7673830477147104e64659cf             2796 main/binary-amd64/Packages
- e8dd86b397e2dec214b2cbe8d4fafb34446f92d34057c3c0f681ca3077509e076aa59e95783f5f7d6fd52fa6682570b408a7dbe1a7f1c6b38f0390b277c1a938              874 main/binary-amd64/Packages.gz
+ 8f4b02d9e4f9c641bb5b4f48999a3d74cd1d20c4e2bf9ea8ed2fa2009d93bd9e2a5b2bc5ebd3da10397162c0699a0a6eead76b76980b405d7f815d0cbaed2d0d              874 main/binary-amd64/Packages.gz
  85b0465fc397ae11441fc1d6f242cee214715f7e41fbc9bcfa7020b04151db0324bc4c241a5351e97a7e82d0cf360aa36c4d9c561a2e46fab50edfef86454f53              924 main/binary-amd64/Packages.xz
 -----BEGIN PGP SIGNATURE-----
 
-iQGzBAEBCgAdFiEEEODqttvlOMWtaM62HACYm0rgrrcFAmqWP4sACgkQHACYm0rg
-rrfuxwv9HyieBpyF8y0UbYJSNBDJj87HNGTaLDxkZL38d3+b7okrY+LOwPA5jXGa
-n3aiWRFXCAO4TAZHmQ3jTMTIkLa03BECt7qh3XfevdIj1KGIBU1385Z68RlRR0/W
-I2ywcRWvPAQtfx6n6xC2Qs0XCow9BrG5IpGYgY8KLoYHh8JZeYyyLemq++qC0j6v
-ClaGq6qIzj12RNf4iIJ9Pc1TP63V4Wu17gnurNRTUnmWUAQNuchJfD/x94+WEJJY
-uVKtEXaGtEtPQDEFGbgfZVLDEk9OFhsaLV8ZNKZhhXfuH2VKxArScM5tS4UbZeYH
-D80srGP4hpT/1xHW0aQsfChplpkDEs03wGQ4xU+6oxwYV3nDYLsKSonEBEvbn8AL
-9RZ1/Nx9QBQqN+axFxk0h10XhTq71NOaEl+3YLqnZBC9nCbqUSWN1OU35dEvoFIg
-HRie1oh8hyszeks1SOcNF9psOSPOQWya8aoHiyskqHL5CP/3eIiwaR0wAtGwhTm3
-WZ/7g+/c
-=CTUH
+iQGzBAEBCgAdFiEEBN+vHezoVPV9BBmd5+Bye9Su6HoFAmqWQU8ACgkQ5+Bye9Su
+6HreFQwAvUJab78/yfu7W6sLIhh0OUphaR+6sXmREOex1E5UzRnHo+zPZP8nWb6w
+dyPWb3iyzjUJFUxYtk0m0f0XkZtKpdFB+jG6Cpdsw/k8vr7yJkuZI+64v3XvqRpj
+mhN1YmGbsy9Xn6S22Tfz0QPHBigxkUM/CeOdKxonsNOrZ8ciBy6F49O2i5pXsWKQ
+PEJL5FLRsHk+N+pfaaFdeA37D01Oo7aswyt5enpfkf+UXNNv8vr2nKRom9iVHwhf
+kwfazjgaudTsjU950r8RO96djVfzF4k5z3Yytq3tG9OoLTzkNFlhLUmruxaB0Bur
+Hcbc43ceEM8csrCyhCr8WCCO+w0LvpLj8vky1i+8kEu5foMqjbj9RTMseuJaiKfG
+ln7/8YL11u2HN6fUI1FwxzS1oWjmrIx16Bo/+L4I9hLZlRfaSIGFJeyVp8SCeXsf
+ZtrX17/Khmgx+cd/Rch9xlQVcMsNK0mtoR9RPDEsr1l5U0X0Gzpd2prkSI0vgaDR
++AbqBa8G
+=28tW
 -----END PGP SIGNATURE-----
