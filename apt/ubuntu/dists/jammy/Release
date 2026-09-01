@@ -1,0 +1,29 @@
+Acquire-By-Hash: yes
+Architectures: amd64
+Codename: jammy
+Components: main
+Date: Tue, 01 Sep 2026 02:59:23 +0000
+Description: Modern Rime packages for Ubuntu 22.04
+Label: rime-ready
+Origin: rime-ready
+Suite: jammy
+MD5Sum:
+ b492730276bcc8c6158cd44d4ea01180              214 Release
+ ce59f502a3663464252ef03b1295bb41             2796 main/binary-amd64/Packages
+ bf2ce721f0ca59942480e1676eb04819              874 main/binary-amd64/Packages.gz
+ 33dee0bc57d93931350663d05281077d              924 main/binary-amd64/Packages.xz
+SHA1:
+ d4098b161c438a13f2e5e6078b65dbad3a2602c5              214 Release
+ 43588acd0ff6960984eaa46276e8aa4955b5fd6a             2796 main/binary-amd64/Packages
+ 08011e1d4a642938696ecf6862db989e9b9a3a69              874 main/binary-amd64/Packages.gz
+ 0b090b643166d8b555c1f1f0b88ac8018e894e01              924 main/binary-amd64/Packages.xz
+SHA256:
+ ee9306aec4bb1b754a3fc66814efefbc6b5aaf21d83f8de0555ca6e9154bc0a1              214 Release
+ b3d219a9778f7563b8d1c51a6ddfa560200ba92e3c2cc171b5b19cfe6e9da94d             2796 main/binary-amd64/Packages
+ 7ab95a003997787523a0b4469cfc696bb5c79aaa1c07fc338bf22a50ab63fbc9              874 main/binary-amd64/Packages.gz
+ 7705ec4a2dd7be06f53a62240018897ca546351b642d769df8cbc18e13b741b3              924 main/binary-amd64/Packages.xz
+SHA512:
+ 8befbe6adf8f671590c1c9c047f336aa79ff7d6657a8ab07547f1ee060cc1914fff837e3d824238cfd493518c2b162b82a30000264013c86b08b6356587ba815              214 Release
+ 6babea535c77204be5be6495541b2b85b4c893669e1720746d201f5f470b6fb72ee774b07dc42db19bb3503a591d0af74400200b7673830477147104e64659cf             2796 main/binary-amd64/Packages
+ e8dd86b397e2dec214b2cbe8d4fafb34446f92d34057c3c0f681ca3077509e076aa59e95783f5f7d6fd52fa6682570b408a7dbe1a7f1c6b38f0390b277c1a938              874 main/binary-amd64/Packages.gz
+ 85b0465fc397ae11441fc1d6f242cee214715f7e41fbc9bcfa7020b04151db0324bc4c241a5351e97a7e82d0cf360aa36c4d9c561a2e46fab50edfef86454f53              924 main/binary-amd64/Packages.xz

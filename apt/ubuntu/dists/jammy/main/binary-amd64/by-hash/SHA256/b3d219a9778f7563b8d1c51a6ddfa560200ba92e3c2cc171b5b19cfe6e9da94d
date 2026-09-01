@@ -1,0 +1,67 @@
+Package: librime-bin
+Version: 1.17.0-1~ubuntu22.04
+Architecture: amd64
+Maintainer: rime-ready maintainers <noreply@github.com>
+Depends: librime1 (= 1.17.0-1~ubuntu22.04), libboost-regex1.74.0, libicu70, libc6 (>= 2.35), libgcc-s1, libstdc++6
+Filename: pool/jammy/main/librime-bin_1.17.0-1.ubuntu22.04_amd64.deb
+Size: 124974
+MD5sum: 9010ddcfc98bb83c7a44fa013488bbd9
+SHA1: b46d6f024aa069a943a1e63e97a5c59586b1ddcf
+SHA256: ae57c6254aeee226f4546acbe071c9c1378fc5fbca95ddb239b626e38c7ff878
+Section: utils
+Priority: optional
+Homepage: https://github.com/Huffer342-WSH/rime-ready
+Description: Rime Input Method Engine - utilities
+ Rebuilt from pinned upstream Rime sources for Ubuntu 22.04.
+
+Package: librime-plugin-lua
+Version: 1.17.0-1~ubuntu22.04
+Architecture: amd64
+Maintainer: rime-ready maintainers <noreply@github.com>
+Depends: librime1 (= 1.17.0-1~ubuntu22.04), libboost-regex1.74.0, libicu70, libc6 (>= 2.35), libgcc-s1, libstdc++6
+Filename: pool/jammy/main/librime-plugin-lua_1.17.0-1.ubuntu22.04_amd64.deb
+Size: 507740
+MD5sum: e954a716a382a6c85cd49a0d34178546
+SHA1: 6718930c627b6aaa57df37fb62d816d08cb9908f
+SHA256: 6e61f71ee977c42cfe283c44e1c193010746bf03f7eeb36608934101aba42124
+Section: libs
+Priority: optional
+Multi-Arch: same
+Homepage: https://github.com/Huffer342-WSH/rime-ready
+Description: Rime Input Method Engine - Lua plugin
+ Rebuilt from pinned upstream Rime sources for Ubuntu 22.04.
+
+Package: librime-plugin-octagram
+Version: 1.17.0-1~ubuntu22.04
+Architecture: amd64
+Maintainer: rime-ready maintainers <noreply@github.com>
+Depends: librime1 (= 1.17.0-1~ubuntu22.04), libboost-regex1.74.0, libicu70, libc6 (>= 2.35), libgcc-s1, libstdc++6
+Filename: pool/jammy/main/librime-plugin-octagram_1.17.0-1.ubuntu22.04_amd64.deb
+Size: 122702
+MD5sum: dabaf1defb4a0fc1a6e69027c411788e
+SHA1: 8caf21cbab1638f4dbfd3d9d737fcde9f8507c88
+SHA256: 6704396350abe8f852339a417ffe6e549c9f3cf879729e165cbc86221668eae1
+Section: libs
+Priority: optional
+Multi-Arch: same
+Homepage: https://github.com/Huffer342-WSH/rime-ready
+Description: Rime Input Method Engine - Octagram plugin
+ Rebuilt from pinned upstream Rime sources for Ubuntu 22.04.
+
+Package: librime1
+Version: 1.17.0-1~ubuntu22.04
+Architecture: amd64
+Maintainer: rime-ready maintainers <noreply@github.com>
+Depends: libboost-regex1.74.0, libicu70, libc6 (>= 2.35), libgcc-s1, libstdc++6
+Filename: pool/jammy/main/librime1_1.17.0-1.ubuntu22.04_amd64.deb
+Size: 1358408
+MD5sum: b820eef5107ba8e556502bc455ac6e85
+SHA1: 36d45b450bf2209c2143ccb1d888ebb895c1884a
+SHA256: a493fadc2115c3994cbbdd8532c0c2024948c52df20f93eaf454ae7b871264dc
+Section: libs
+Priority: optional
+Multi-Arch: same
+Homepage: https://github.com/Huffer342-WSH/rime-ready
+Description: Rime Input Method Engine - core library
+ Rebuilt from pinned upstream Rime sources for Ubuntu 22.04.
+
