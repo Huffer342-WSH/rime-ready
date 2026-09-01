@@ -1,119 +1,30 @@
 # rime-ready
 
-`rime-ready` 为旧版 Linux 发行版补齐现代 Rime 运行环境，并提供独立的输入方案配置脚本。项目当前支持 Ubuntu 22.04，后续可以通过新增平台配置和 CI Matrix 支持其他 Ubuntu、Debian、Fedora 等系统。
+`rime-ready` 为 Ubuntu 22.04 提供与新版雾凇拼音匹配的 Rime 运行环境。目前支持 Ubuntu 22.04 amd64，包含：
 
-当前构建并安装：
+- librime 1.17.0；
+- 与 librime 匹配的 librime-lua；
+- 与 librime 匹配的 librime-octagram；
+- `rime_deployer` 等命令行工具；
+- 签名 APT 软件源；
+- 雾凇拼音和可选万象 Gram 的一键安装脚本。
 
-- librime 1.17.0
-- 最新固定提交的 librime-lua
-- 最新固定提交的 librime-octagram
-- 与新版 librime 匹配的命令行工具
+上游版本固定在 [`versions.env`](versions.env)，本地构建、GitHub Actions 和发布软件包使用相同版本。
 
-输入法前端和用户方案不包含在 deb 中。一键安装脚本可以另外安装、配置雾凇拼音和可选的万象 Gram。
+相关上游项目：
 
-上游版本固定在 [`versions.env`](versions.env)，本地构建和 GitHub Actions 使用相同源码。
+- [雾凇拼音（rime-ice）](https://github.com/iDvel/rime-ice)
+- [万象语法模型（RIME-LMDG）](https://github.com/amzxyz/RIME-LMDG)
 
-## 一键安装
+rime-ready 的 deb 不包含这两个项目的用户配置或模型文件；一键脚本会按所选预设从上游 Release 下载。
 
-目前只支持 Ubuntu 22.04 amd64。以普通桌面用户运行下面的命令，不要先加 `sudo`；脚本会在安装 APT 软件包时自行调用 `sudo`：
+## Ubuntu 22.04 安装新版雾凇的问题
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | bash
-```
+Ubuntu 22.04 官方仓库提供的是 librime 1.7.3。新版雾凇使用了较新的 Lua 模块加载方式，只安装 Ubuntu 自带的 `fcitx5-rime` 或 `ibus-rime` 时，可能无法正确加载和部署完整方案。
 
-`install.sh` 已包含配置 APT 仓库、下载 deb、源码编译、安装雾凇和设置输入法所需的全部逻辑，不依赖仓库中的 `scripts/` 目录。默认验证并添加 rime-ready 的签名 APT 仓库，通过 APT 安装四个标准 deb，然后使用 `ice` 预设：安装 Ubuntu 的 Fcitx5 Rime 前端、安装稳定版雾凇、编译方案、设置并启动输入法。
+问题不在 Fcitx5 或 IBus 本身，而在它们最终加载的 Rime 运行库及插件版本较旧。只单独替换 `librime.so` 也不安全，因为 librime、Lua 插件、Octagram 插件和命令行工具需要使用彼此匹配的版本。
 
-给在线脚本传参时，把参数写在 `bash -s --` 后面：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
-  bash -s -- --preset runtime-only
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
-  bash -s -- --preset ice-gram
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
-  bash -s -- --preset ice --frontend ibus
-```
-
-用户配置控制：
-
-```bash
-# 安装方案，但不修改输入法设置
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
-  bash -s -- --preset ice --no-activate
-
-# 设置输入法，但不立即启动前端
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
-  bash -s -- --preset ice --no-start
-```
-
-需要本机编译固定版本的 Rime 时使用 `--build`。编译过程不需要先克隆本仓库，但会下载上游源码并安装编译依赖：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
-  bash -s -- --build --preset ice
-```
-
-也可以克隆仓库后执行同一个脚本：
-
-```bash
-./install.sh
-./install.sh --preset ice-gram
-```
-
-需要绕过 APT 仓库、直接从最新 GitHub Release 下载时使用 `--download`：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
-  bash -s -- --download --preset runtime-only
-```
-
-安装指定的本地或远程 deb 时，使用已克隆仓库中的脚本更方便：
-
-```bash
-./install.sh --deb ./dist --preset runtime-only
-./install.sh --deb https://example.com/librime1.deb \
-  --deb https://example.com/librime-bin.deb \
-  --deb https://example.com/librime-plugin-lua.deb \
-  --deb https://example.com/librime-plugin-octagram.deb --preset ice
-```
-
-脚本只通过 `sudo` 安装 APT 软件包和 deb；用户目录中的 Rime 配置始终以当前桌面用户身份修改。
-
-## APT 仓库
-
-rime-ready 使用 GitHub Pages 发布签名的 APT 仓库。一键脚本会核对仓库公钥指纹，再写入以下软件源：
-
-```text
-deb [arch=amd64 signed-by=/usr/share/keyrings/rime-ready-archive-keyring.gpg] https://huffer342-wsh.github.io/rime-ready/apt/ubuntu jammy main
-```
-
-安装完成后，四个 Rime 软件包会随正常的 `apt update` 和 `apt upgrade` 更新。仓库目录按发行版家族、版本代号和架构组织：
-
-```text
-apt/
-├── ubuntu/
-│   ├── dists/
-│   │   └── jammy/main/binary-amd64/
-│   └── pool/
-│       └── jammy/main/
-└── debian/                  # 后续支持 Debian 时添加
-    ├── dists/<codename>/
-    └── pool/<codename>/
-```
-
-每个平台在 `platforms/<target>/platform.env` 中声明仓库家族、suite、component、architecture 和 Release 文件匹配模式。Release Workflow 只在完整 CT 和 GitHub Release 发布成功后更新 `apt-repository` 分支，并使用独立的 APT 密钥生成 `InRelease` 和 `Release.gpg`。GitHub Pages 从该分支发布静态仓库。私钥通过仓库 Secret `APT_GPG_PRIVATE_KEY` 提供；离线备份不能提交到 Git 仓库。需要从已有 Release 重建仓库时，可手动运行 `Publish APT repository` Workflow。
-
-如需移除软件源但保留已安装软件：
-
-```bash
-sudo rm -f /etc/apt/sources.list.d/rime-ready.list
-sudo rm -f /usr/share/keyrings/rime-ready-archive-keyring.gpg
-sudo apt update
-```
-
-## 使用预编译 deb
-
-Release 同时提供四个与 Ubuntu 22.04 同名、职责相同但版本更高的软件包：
+`rime-ready` 将以下四个组件构建为 Ubuntu 同名软件包，通过 APT 一起升级：
 
 ```text
 librime1
@@ -122,33 +33,190 @@ librime-plugin-lua
 librime-plugin-octagram
 ```
 
-把四个 deb 放在同一目录后执行：
+完整的雾凇输入法由三部分组成：
 
-```bash
-sudo apt install ./*.deb
+1. **输入法前端**：Ubuntu 提供的 `fcitx5-rime` 或 `ibus-rime`。
+2. **Rime 运行环境**：rime-ready APT 软件源提供的四个新版软件包。
+3. **用户输入方案**：雾凇配置、可选的万象 Gram，以及部署生成的用户目录文件。
+
+需要完整安装输入法，可以使用后文的一键安装脚本。
+
+## 通过 APT 软件源安装运行环境
+
+rime-ready 使用 GitHub Pages 发布签名 APT 仓库：
+
+```text
+deb [arch=amd64 signed-by=/usr/share/keyrings/rime-ready-archive-keyring.gpg] https://huffer342-wsh.github.io/rime-ready/apt/ubuntu jammy main
 ```
 
-APT 会把它们视为 Jammy 对应软件包的升级版本。它们不依赖 Fcitx5/IBus，不安装用户配置脚本，也不会激活输入法。根据桌面环境另外安装 Ubuntu 官方前端：
+以下命令适用于 Ubuntu 22.04 amd64。
+
+### 1. 安装下载工具
 
 ```bash
-sudo apt install fcitx5-rime
+sudo apt update
+sudo apt install -y ca-certificates curl
+```
+
+### 2. 安装仓库公钥
+
+```bash
+curl -fsSL \
+  https://huffer342-wsh.github.io/rime-ready/keys/rime-ready-archive-keyring.gpg |
+  sudo tee /usr/share/keyrings/rime-ready-archive-keyring.gpg >/dev/null
+sudo chmod 0644 /usr/share/keyrings/rime-ready-archive-keyring.gpg
+```
+
+如果此前添加过旧公钥并遇到 `NO_PUBKEY E7E0727BD4AEE87A`，删除旧文件后重新执行上面的公钥安装命令：
+
+```bash
+sudo rm -f /usr/share/keyrings/rime-ready-archive-keyring.gpg
+```
+
+### 3. 添加软件源
+
+```bash
+echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/rime-ready-archive-keyring.gpg] https://huffer342-wsh.github.io/rime-ready/apt/ubuntu jammy main' |
+  sudo tee /etc/apt/sources.list.d/rime-ready.list >/dev/null
+sudo apt update
+```
+
+### 4. 安装 Rime 运行环境
+
+```bash
+sudo apt install -y librime1 librime-bin librime-plugin-lua librime-plugin-octagram
+```
+
+按桌面环境选择输入法前端：
+
+```bash
+sudo apt install -y fcitx5-rime
 # 或
-sudo apt install ibus-rime
+sudo apt install -y ibus-rime
 ```
 
-如需安装雾凇并设置输入法，请克隆本仓库后显式运行：
+## 一键安装雾凇
+
+脚本目前只支持 Ubuntu 22.04 amd64。请以普通桌面用户运行，不要在命令前添加 `sudo`；脚本只在安装系统软件包时自行调用 `sudo`。
+
+### 最常用：Fcitx5 + 雾凇
 
 ```bash
-scripts/install-rime-ice.sh
-# 或
-scripts/install-rime-ice.sh --frontend ibus
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | bash
 ```
 
-只安装方案、不修改当前输入法：
+默认执行以下操作：
+
+1. 验证并添加 rime-ready APT 软件源；
+2. 安装四个新版 Rime 软件包；
+3. 安装 Ubuntu 的 `fcitx5-rime`；
+4. 下载稳定版雾凇；
+5. 备份原 Rime 用户目录；
+6. 保留已有的 `rime_ice.userdb` 用户词库；
+7. 部署方案，设置并启动 Fcitx5 Rime。
+
+### 参数列表
+
+给在线脚本传参时，参数必须写在 `bash -s --` 后面：
 
 ```bash
-scripts/install-rime-ice.sh --no-activate
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- <参数>
 ```
+
+| 参数                    | 说明                                                         |
+| ----------------------- | ------------------------------------------------------------ |
+| `--apt`                 | 从 rime-ready APT 软件源安装四个运行库软件包，默认方式。     |
+| `--download`            | 绕过 APT 软件源，从最新 GitHub Release 下载并校验四个 deb。  |
+| `--build`               | 下载固定版本的上游源码，在本机编译并安装四个 deb。           |
+| `--deb <目录/文件/URL>` | 安装指定的 deb 集合；可重复使用。                            |
+| `--preset runtime-only` | 只安装 Rime 运行库和命令行工具，不安装输入法前端和用户方案。 |
+| `--preset ice`          | 安装运行库、输入法前端和稳定版雾凇，默认预设。               |
+| `--preset ice-gram`     | 在 `ice` 基础上安装万象 Gram。                               |
+| `--with-gram`           | `--preset ice-gram` 的简写。                                 |
+| `--frontend fcitx5`     | 使用 Fcitx5 前端，默认值。                                   |
+| `--frontend ibus`       | 使用 IBus 前端。                                             |
+| `--no-activate`         | 安装并部署方案，但不修改或启动当前用户的输入法前端。         |
+| `--no-start`            | 修改输入法设置，但不立即启动前端。                           |
+| `-h`、`--help`          | 显示帮助。                                                   |
+
+### 常用组合
+
+安装雾凇和万象 Gram，但不修改当前输入法配置：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset ice-gram --no-activate
+```
+
+使用 IBus 安装雾凇：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset ice --frontend ibus
+```
+
+只安装 Rime 运行环境：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset runtime-only
+```
+
+只设置输入法，不立即启动前端：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset ice --no-start
+```
+
+### 其他安装来源
+
+从最新 GitHub Release 直接下载 deb：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --download --preset ice
+```
+
+在本机从固定源码编译；该过程会下载上游源码并安装编译依赖：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --build --preset ice
+```
+
+克隆仓库后安装本地 deb：
+
+```bash
+./install.sh --deb ./dist --preset runtime-only
+```
+
+也可以重复传入四个本地文件或 URL：
+
+```bash
+./install.sh \
+  --deb https://example.com/librime1.deb \
+  --deb https://example.com/librime-bin.deb \
+  --deb https://example.com/librime-plugin-lua.deb \
+  --deb https://example.com/librime-plugin-octagram.deb \
+  --preset ice
+```
+
+`install.sh` 是可独立在线运行的脚本，不依赖仓库中的 `scripts/` 目录。它只通过 `sudo` 修改系统软件包；用户目录中的 Rime 配置始终以当前桌面用户身份修改。
+
+## 软件包说明
+
+APT 仓库和 GitHub Release 都提供以下四个 Ubuntu 同名软件包：
+
+```text
+librime1
+librime-bin
+librime-plugin-lua
+librime-plugin-octagram
+```
+
+这些软件包使用比 Ubuntu 22.04 官方版本更高的 Debian 版本号。APT 会将它们识别为正常升级，不会在后续 `apt upgrade` 时自动降级到 Jammy 的 librime 1.7.3。
 
 软件包使用 Ubuntu 标准路径：
 
@@ -159,19 +227,79 @@ scripts/install-rime-ice.sh --no-activate
 /usr/bin/rime_deployer
 ```
 
-这些文件都由 `dpkg` 记录所有权。`apt update` 和 `apt upgrade` 会正常工作，并且不会因为 Jammy 仓库中的 1.7.3 版本较旧而自动降级。
+所有文件都由 `dpkg` 记录所有权。软件包不包含用户输入方案，不修改 Fcitx5/IBus 配置，也不会自动激活输入法。
 
-## 安装职责
+## 只安装或更新雾凇
 
-完整的 Fcitx5 雾凇安装由三部分组成：
+已经安装新版 Rime 运行环境后，可以克隆仓库并单独更新雾凇。
 
-1. **Ubuntu APT**：安装 `fcitx5-rime` 或 `ibus-rime` 输入法前端，以及 Boost、ICU、glibc 等动态依赖。
-2. **rime-ready 生成的标准 deb**：以更高版本升级 Ubuntu 的 `librime1`、`librime-bin`、`librime-plugin-lua` 和 `librime-plugin-octagram`，使用 `/usr/lib`、`/usr/bin` 等标准路径。deb 不包含用户配置脚本，也不激活输入法。
-3. **仓库脚本**：下载和校验四个 deb，选择输入法前端，安装稳定版雾凇或万象 Gram，编译用户方案，并在用户明确选择时修改 Fcitx5/IBus 配置和启动前端。
+Fcitx5：
 
-需要回退时，`scripts/uninstall.sh` 会使用 `apt --allow-downgrades` 恢复 Ubuntu 22.04 官方版本，而不是手工删除库文件。
+```bash
+scripts/install-rime-ice.sh
+```
 
-## 分步构建
+IBus：
+
+```bash
+scripts/install-rime-ice.sh --frontend ibus
+```
+
+只部署方案，不修改当前输入法：
+
+```bash
+scripts/install-rime-ice.sh --no-activate
+```
+
+安装前，脚本会把原配置目录重命名为带时间戳的备份目录，并保留已有的 `rime_ice.userdb`。
+
+只设置输入法前端、不重新安装方案：
+
+```bash
+scripts/configure-input-method.sh --frontend fcitx5
+# 或
+scripts/configure-input-method.sh --frontend ibus
+```
+
+## APT 仓库结构
+
+APT 仓库通过 GitHub Pages 发布，目录按发行版家族、版本代号、组件和架构组织：
+
+```text
+apt/
+├── ubuntu/
+│   ├── dists/
+│   │   └── jammy/
+│   │       └── main/binary-amd64/
+│   └── pool/
+│       └── jammy/main/
+└── debian/                  # 后续支持 Debian 时添加
+    ├── dists/<codename>/
+    └── pool/<codename>/
+```
+
+每个平台在 `platforms/<target>/platform.env` 中声明仓库家族、suite、component、architecture 和 Release 文件匹配模式。发布流程使用独立 APT 密钥生成 `InRelease` 和 `Release.gpg`，并保留 By-Hash 索引，避免 GitHub Pages CDN 缓存不同步。
+
+APT 私钥由仓库 Secret `APT_GPG_PRIVATE_KEY` 提供，离线备份不能提交到 Git。需要从已有 GitHub Release 重建 APT 仓库时，可以手动运行 `Publish APT repository` Workflow。
+
+移除软件源但保留当前已安装软件：
+
+```bash
+sudo rm -f /etc/apt/sources.list.d/rime-ready.list
+sudo rm -f /usr/share/keyrings/rime-ready-archive-keyring.gpg
+sudo apt update
+```
+
+## 开发文档
+
+- [手动编译教程](docs/MANUAL_BUILD.md)：准备 Ubuntu 22.04 环境，分步编译、测试、打包和安装 deb。
+- [设计说明](docs/DESIGN.md)：构建数据流、软件包拆分、安装流程、APT 仓库和发布设计。
+
+## 本地构建与测试
+
+下面只列出常用命令，完整步骤和注意事项见[手动编译教程](docs/MANUAL_BUILD.md)。
+
+分步构建：
 
 ```bash
 scripts/build.sh --target ubuntu-22.04
@@ -186,61 +314,47 @@ dist/*.deb
 dist/SHA256SUMS-*
 ```
 
-强制清理并重新构建：
+强制清理后重新构建：
 
 ```bash
 scripts/build.sh --target ubuntu-22.04 --clean
 ```
 
-发布前的完整检查统一由 CT 脚本执行：
+运行发布前完整检查：
 
 ```bash
 scripts/ct.sh --target ubuntu-22.04
 ```
 
-本地可使用预装好 APT 依赖的复用容器，避免每次从 `ubuntu:22.04` 重新准备环境：
+使用复用容器执行 CT：
 
 ```bash
 scripts/docker-ct.sh --target ubuntu-22.04
-scripts/docker-ct.sh --reuse-build       # 复用已有编译目录
-scripts/docker-ct.sh --rebuild-image     # 仅在基础依赖变化时重建镜像
+scripts/docker-ct.sh --reuse-build
+scripts/docker-ct.sh --rebuild-image
 ```
 
-默认镜像名为 `rime-ready-ubuntu22-ct:local`，可通过 `RIME_READY_CT_IMAGE` 覆盖。
+默认容器镜像名为 `rime-ready-ubuntu22-ct:local`，可通过 `RIME_READY_CT_IMAGE` 覆盖。
 
-CT 会编译固定版本的上游源码，运行 librime 单元测试，检查动态库依赖，生成四个标准 deb，并以 Lintian error 作为失败条件。随后安装 Ubuntu APT 的 `fcitx5-rime` 和 `ibus-rime`，通过 `ldd -r` 验证它们加载 `/usr/lib/x86_64-linux-gnu/librime.so.1` 时没有缺失库或未解析符号。最后，CT 用外部脚本部署稳定版雾凇，并编译一个小型 Rime API 测试应用：模拟输入 `nihao`，断言候选包含“你好”，选择候选后断言提交文本也是“你好”。Release Workflow 只有在这些检查全部通过后才会发布产物。
+CT 会执行以下检查：
 
-## 只安装或更新雾凇拼音
-
-Fcitx5：
-
-```bash
-scripts/install-rime-ice.sh
-```
-
-IBus：
-
-```bash
-scripts/install-rime-ice.sh --frontend ibus
-```
-
-安装前，脚本会把原配置目录重命名为带时间戳的备份目录。更新雾凇时会保留已有的 `rime_ice.userdb`。
-
-也可以只设置输入法前端，不重新安装方案：
-
-```bash
-scripts/configure-input-method.sh --frontend fcitx5
-# 或
-scripts/configure-input-method.sh --frontend ibus
-```
+1. 编译固定版本的 librime、Lua 和 Octagram；
+2. 运行 librime 单元测试；
+3. 检查动态库依赖；
+4. 生成四个标准 deb，并以 Lintian error 作为失败条件；
+5. 检查 APT 仓库目录、索引、By-Hash 和公钥；
+6. 安装 Fcitx5/IBus 前端并检查 ABI；
+7. 部署稳定版雾凇；
+8. 模拟输入 `nihao`，确认候选和提交文本包含“你好”。
 
 ## GitHub Actions
 
-- `build.yml`：普通 `main` Push 会运行 CT；PR 不自动运行。需要测试 PR 时，在 Actions 页面手动运行 `Continuous test` 并填写 PR 编号。该 Workflow 只上传 CI 产物，永不发布版本。
-- `release.yml`：推送 `v*` Tag 或在 Actions 页面手动触发时运行完整 CT，全部通过后发布四个 deb 和校验文件。
-- `upstream-watch.yml`：每周一轮询稳定上游 Release。发现新版后直接更新 `main` 的固定版本并调度 `release.yml`，不创建 PR。Release Workflow 仍需完整 CT 通过才会发布。
+- `build.yml`：`main` Push 后运行完整 CT，只上传 CI 产物，不发布版本。
+- `release.yml`：推送 `v*` Tag 或手动触发后运行完整 CT；成功后发布 GitHub Release，并更新签名 APT 仓库。
+- `apt-repository.yml`：从已有 GitHub Release 手动重建某个平台的 APT 仓库。
+- `upstream-watch.yml`：每周检查稳定上游版本；发现新版后更新固定版本并调度 Release Workflow。
 
-手动触发 Release 时可以不填写 Tag。Workflow 会按以下格式自动生成：
+Release Tag 默认格式：
 
 ```text
 v<RIME_VERSION>-r<PACKAGE_REVISION>
@@ -252,44 +366,33 @@ v<RIME_VERSION>-r<PACKAGE_REVISION>
 v1.17.0-r1
 ```
 
-如果自动生成的 Tag 已存在，需要更新 `PACKAGE_REVISION`，或者手动填写另一个以 `v` 开头的 Tag。
+增加平台时，需要：
 
-工作流使用 Matrix 描述目标平台。目前只有：
-
-```yaml
-- target: ubuntu-22.04
-  runner: ubuntu-22.04
-```
-
-增加新系统时，需要新增 `platforms/<target>/`，再把目标加入 Matrix。平台差异留在平台目录，通用的下载、编译、测试和打包流程继续使用 `scripts/`。
+1. 新增 `platforms/<target>/platform.env` 和构建依赖；
+2. 声明目标发行版、APT suite、component、architecture 和 Release 文件模式；
+3. 将目标加入 GitHub Actions Matrix。
 
 ### 上游版本记录
 
 仓库使用两个文件记录上游状态：
 
-- `versions.env`：下一次构建使用的 librime Release、插件提交，以及雾凇 `full.zip` 的 Asset ID 和 SHA-256。
-- `upstream-state.json`：最近一次成功发布的 rime-ready Release 实际包含的上游版本。稳定版雾凇还会记录压缩包 Asset ID 和 SHA-256。
+- `versions.env`：下一次构建使用的 librime、插件和雾凇版本。
+- `upstream-state.json`：最近一次成功发布实际包含的上游版本。
 
-自动轮询只跟踪 librime 的正式 Release，以及雾凇形如 `YYYY.MM.DD` 的稳定 Release。`librime-lua` 和 `librime-octagram` 没有稳定 Release/稳定分支，因此只固定已验证提交，不自动跟踪它们的 `master`。
+自动轮询只跟踪 librime 正式 Release，以及形如 `YYYY.MM.DD` 的稳定版雾凇。librime-lua 和 librime-octagram 没有稳定 Release，因此只固定已经验证的提交。
 
-每周轮询以 `upstream-state.json` 为基准。发现新版本后会更新 `versions.env` 并调度 Release Workflow；只有完整 CT 通过后才发布。Release 发布成功后，Workflow 才把本次发布信息写回 `upstream-state.json`；如果构建、输入输出测试或发布失败，成功状态不会提前更新。
+只有完整 CT 和发布全部成功后，Release Workflow 才更新 `upstream-state.json`。构建或测试失败不会提前记录为成功状态。
 
-也可以在 Actions 页面手动运行 `Watch upstream releases`，立即检查上游。
+## 卸载和恢复官方版本
 
-周期更新和 Release Workflow 需要仓库的 Actions 权限允许写入 Contents 和调度 Workflow。如果启用了 `main` 分支保护，需要允许它们更新 `versions.env` 和 `upstream-state.json`。
-
-## 卸载
-
-恢复 Ubuntu 22.04 官方 Rime 软件包：
+移除 rime-ready 软件源，并恢复 Ubuntu 22.04 官方 Rime 软件包：
 
 ```bash
 scripts/uninstall.sh
 ```
 
-恢复系统运行库不会删除 `~/.local/share/fcitx5/rime` 中的输入方案和用户词库。
+该脚本使用 `apt --allow-downgrades` 恢复官方版本，不会手工删除 `/usr/lib` 下的文件，也不会删除 `~/.local/share/fcitx5/rime` 中的输入方案和用户词库。
 
-## 说明
+## 许可证
 
-Ubuntu 22.04 自带 librime 1.7.3。新版雾凇使用的新式 Lua 模块加载方式无法在该版本正常运行，因此本项目成套构建 librime、librime-lua 和 librime-octagram，避免混用不匹配的 ABI。
-
-项目生成的 deb 会通过 APT 正常升级 `/usr/lib/x86_64-linux-gnu` 和 `/usr/bin` 中对应软件包的文件；不会绕过 `dpkg` 手工覆盖这些路径。
+见 [`LICENSE`](LICENSE)。
