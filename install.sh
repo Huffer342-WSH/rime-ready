@@ -2,11 +2,12 @@
 # Self-contained installer: suitable for `curl ... | bash`.
 set -euo pipefail
 
-mode=apt
+mode=auto
 preset=ice
-frontend=fcitx5
+frontend=auto
 activate=1
 start_frontend=1
+check_system=0
 deb_sources=()
 required_packages=(librime1 librime-bin librime-plugin-lua librime-plugin-octagram)
 
@@ -29,8 +30,9 @@ usage() {
   ./install.sh [选项]
 
 运行库来源：
-  --apt                 从 rime-ready APT 仓库安装四个标准 deb（默认）
-  --download            从最新 GitHub Release 下载四个标准 deb
+  --auto                自动识别系统并选择官方仓库或 rime-ready 仓库（默认）
+  --apt                 强制使用 rime-ready APT 仓库（仅 Jammy 系统）
+  --download            从最新 GitHub Release 下载四个 Jammy deb
   --build               在本机从固定源码编译四个标准 deb
   --deb <目录/文件/URL> 安装指定 deb；可重复使用
 
@@ -40,9 +42,10 @@ usage() {
   --preset ice-gram     在 ice 基础上安装万象 Gram
 
 输入法：
-  --frontend fcitx5|ibus 选择 Ubuntu APT 输入法前端（默认 fcitx5）
+  --frontend fcitx5|ibus 选择输入法前端（Fedora 默认 IBus，其他系统默认 Fcitx5）
   --no-activate          安装方案但不修改当前用户的输入法设置
   --no-start             设置输入法但不立即启动前端
+  --check-system         只显示系统识别和运行库来源，不执行安装
 EOF
 }
 
@@ -57,6 +60,7 @@ log() {
 
 while (($#)); do
   case $1 in
+    --auto) mode=auto; deb_sources=(); shift ;;
     --apt) mode=apt; deb_sources=(); shift ;;
     --download) mode=download; deb_sources=(); shift ;;
     --build) mode=build; deb_sources=(); shift ;;
@@ -66,20 +70,93 @@ while (($#)); do
     --with-gram) preset=ice-gram; shift ;;
     --no-activate) activate=0; shift ;;
     --no-start) start_frontend=0; shift ;;
+    --check-system) check_system=1; shift ;;
     -h | --help) usage; exit 0 ;;
     *) die "未知参数：$1" ;;
   esac
 done
 case $preset in runtime-only | ice | ice-gram) ;; *) die "不支持预设：$preset" ;; esac
-case $frontend in fcitx5 | ibus) ;; *) die "不支持前端：$frontend" ;; esac
+case $frontend in auto | fcitx5 | ibus) ;; *) die "不支持前端：$frontend" ;; esac
 [[ $EUID -ne 0 ]] || die "请以普通桌面用户运行，不要使用 sudo。"
 
-[[ -r /etc/os-release ]] || die "无法识别当前系统"
-# shellcheck disable=SC1091
-source /etc/os-release
-[[ ${ID:-} == ubuntu && ${VERSION_ID:-} == 22.04 ]] ||
-  die "目前只支持 Ubuntu 22.04，检测到 ${PRETTY_NAME:-未知系统}"
-[[ $(dpkg --print-architecture) == amd64 ]] || die "目前只支持 amd64 架构"
+version_at_least() {
+  [[ $(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1) == "$2" ]]
+}
+
+os_release_file=${RIME_READY_OS_RELEASE:-/etc/os-release}
+[[ -r $os_release_file ]] || die "无法识别当前系统"
+# shellcheck disable=SC1090
+source "$os_release_file"
+os_id=${ID,,}
+os_version=${VERSION_ID:-}
+os_like=" ${ID_LIKE:-} "
+os_name=${PRETTY_NAME:-$os_id}
+ubuntu_codename=${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}
+package_family=
+runtime_source=native
+platform_description=
+
+case $os_id in
+  ubuntu)
+    package_family=apt
+    platform_description="Ubuntu $os_version"
+    if [[ $os_version == 22.04 ]]; then
+      runtime_source=rime-ready
+    elif ! version_at_least "$os_version" 24.04; then
+      die "Ubuntu $os_version 的官方 Rime 过旧，rime-ready 暂未为该版本提供软件包"
+    fi
+    ;;
+  linuxmint)
+    package_family=apt
+    platform_description="Linux Mint $os_version（Ubuntu ${ubuntu_codename:-未知基线}）"
+    case $ubuntu_codename in
+      jammy) runtime_source=rime-ready ;;
+      noble | oracular | plucky | questing) runtime_source=native ;;
+      *) die "不支持 Linux Mint $os_version 的 Ubuntu 基线：${ubuntu_codename:-未知}" ;;
+    esac
+    ;;
+  fedora)
+    package_family=dnf
+    platform_description="Fedora $os_version"
+    ;;
+  arch | cachyos)
+    package_family=pacman
+    platform_description=$os_name
+    ;;
+  *)
+    if [[ $os_like == *" arch "* ]]; then
+      package_family=pacman
+      platform_description=$os_name
+    else
+      die "暂不支持当前系统：$os_name；支持 Ubuntu、Linux Mint、Fedora、Arch Linux 和 CachyOS"
+    fi
+    ;;
+esac
+
+if [[ $frontend == auto ]]; then
+  if [[ $package_family == dnf ]]; then frontend=ibus; else frontend=fcitx5; fi
+fi
+
+if [[ $mode == apt ]]; then
+  [[ $package_family == apt && $runtime_source == rime-ready ]] ||
+    die "--apt 只适用于 Ubuntu 22.04 和基于 Jammy 的 Linux Mint"
+  runtime_source=rime-ready
+elif [[ $mode != auto ]]; then
+  [[ $package_family == apt && $runtime_source == rime-ready ]] ||
+    die "--$mode 只支持 Ubuntu 22.04 和基于 Jammy 的 Linux Mint"
+  [[ $(dpkg --print-architecture) == amd64 ]] || die "rime-ready Jammy deb 目前只支持 amd64"
+fi
+if [[ $runtime_source == rime-ready ]]; then
+  [[ $(dpkg --print-architecture) == amd64 ]] || die "rime-ready Jammy APT 仓库目前只支持 amd64"
+fi
+
+log "识别系统：$platform_description；包管理器：$package_family；Rime 来源：$runtime_source；前端：$frontend"
+((check_system)) && exit 0
+case $package_family in
+  apt) command -v apt-get >/dev/null || die "找不到 apt-get" ;;
+  dnf) command -v dnf >/dev/null || die "找不到 dnf" ;;
+  pacman) command -v pacman >/dev/null || die "找不到 pacman" ;;
+esac
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -253,6 +330,54 @@ SH
   sudo apt-get install -y "${debs[@]}"
 }
 
+verify_modern_runtime() {
+  local raw_version normalized
+  command -v rime_deployer >/dev/null || die "安装后仍找不到 rime_deployer"
+  case $package_family in
+    apt) raw_version=$(dpkg-query -W -f='${Version}' "$core_package") ;;
+    dnf) raw_version=$(rpm -q --qf '%{VERSION}' librime) ;;
+    pacman) raw_version=$(pacman -Q librime | awk '{print $2}') ;;
+  esac
+  normalized=${raw_version#*:}
+  normalized=${normalized%%-*}
+  normalized=${normalized%%+*}
+  version_at_least "$normalized" 1.8.5 ||
+    die "系统仓库安装的 librime $raw_version 低于雾凇所需的 1.8.5"
+  log "已安装 librime $raw_version"
+}
+
+install_native_runtime() {
+  local -a fedora_packages=()
+  case $package_family in
+    apt)
+      sudo apt-get update
+      if apt-cache show librime1t64 >/dev/null 2>&1; then
+        core_package=librime1t64
+      else
+        core_package=librime1
+      fi
+      sudo apt-get install -y \
+        "$core_package" librime-bin librime-plugin-lua librime-plugin-octagram
+      ;;
+    dnf)
+      core_package=librime
+      fedora_packages=(librime librime-tools librime-lua)
+      if rpm -q librime-octagram >/dev/null 2>&1 ||
+        dnf -q list --available librime-octagram >/dev/null 2>&1; then
+        fedora_packages+=(librime-octagram)
+      elif [[ $preset == ice-gram ]]; then
+        die "当前 Fedora 软件源没有 librime-octagram，无法启用万象 Gram；可改用 --preset ice"
+      fi
+      sudo dnf install -y "${fedora_packages[@]}"
+      ;;
+    pacman)
+      core_package=librime
+      sudo pacman -Syu --needed --noconfirm librime
+      ;;
+  esac
+  verify_modern_runtime
+}
+
 install_apt_repository_debs() {
   local key_file=$tmp/rime-ready-archive-keyring.gpg
   local source_file=$tmp/rime-ready.list actual_fingerprint
@@ -271,6 +396,25 @@ EOF
   sudo install -m 0644 "$source_file" /etc/apt/sources.list.d/rime-ready.list
   sudo apt-get update
   sudo apt-get install -y "${required_packages[@]}"
+  core_package=librime1
+  verify_modern_runtime
+}
+
+install_frontend_and_tools() {
+  local frontend_package
+  case $frontend in fcitx5) frontend_package=fcitx5-rime ;; ibus) frontend_package=ibus-rime ;; esac
+  case $package_family in
+    apt)
+      sudo apt-get update
+      sudo apt-get install -y "$frontend_package" curl unzip python3 procps
+      ;;
+    dnf)
+      sudo dnf install -y "$frontend_package" curl unzip python3 procps-ng
+      ;;
+    pacman)
+      sudo pacman -S --needed --noconfirm "$frontend_package" curl unzip python procps-ng
+      ;;
+  esac
 }
 
 download_release_debs() {
@@ -478,17 +622,22 @@ EOF
 }
 
 case $mode in
+  auto)
+    if [[ $runtime_source == rime-ready ]]; then
+      install_apt_repository_debs
+    else
+      install_native_runtime
+    fi
+    ;;
   apt) install_apt_repository_debs ;;
-  build) build_debs ;;
-  download) download_release_debs ;;
-  deb) install_given_debs ;;
+  build) build_debs; core_package=librime1; verify_modern_runtime ;;
+  download) download_release_debs; core_package=librime1; verify_modern_runtime ;;
+  deb) install_given_debs; core_package=librime1; verify_modern_runtime ;;
 esac
 
 if [[ $preset == runtime-only ]]; then
   log "Rime 运行库和应用安装完成；未安装或激活输入法前端。"
   exit 0
 fi
-case $frontend in fcitx5) frontend_package=fcitx5-rime ;; ibus) frontend_package=ibus-rime ;; esac
-sudo apt-get update
-sudo apt-get install -y "$frontend_package" curl unzip python3
+install_frontend_and_tools
 install_rime_ice

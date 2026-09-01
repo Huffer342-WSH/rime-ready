@@ -1,6 +1,8 @@
 # rime-ready
 
-`rime-ready` 为 Ubuntu 22.04 提供与新版雾凇拼音匹配的 Rime 运行环境。目前支持 Ubuntu 22.04 amd64，包含：
+`rime-ready` 为常见 Linux 发行版安装与新版雾凇拼音匹配的 Rime 运行环境。脚本会识别系统：仓库已提供 librime 1.8.5 或更高版本时直接调用系统包管理器；Ubuntu 22.04 及基于 Jammy 的 Linux Mint 使用 rime-ready 软件源补齐新版运行库。
+
+项目为 Jammy 构建的软件包包含：
 
 - librime 1.17.0；
 - 与 librime 匹配的 librime-lua；
@@ -17,6 +19,27 @@
 - [万象语法模型（RIME-LMDG）](https://github.com/amzxyz/RIME-LMDG)
 
 rime-ready 的 deb 不包含这两个项目的用户配置或模型文件；一键脚本会按所选预设从上游 Release 下载。
+
+### 支持的发行版
+
+| 系统 | Rime 运行库来源 | 包管理器 |
+| --- | --- | --- |
+| Ubuntu 22.04 | rime-ready 签名 APT 软件源 | APT |
+| Ubuntu 24.04 及更新版本 | 发行版官方软件源 | APT |
+| Linux Mint 21.x（Jammy） | rime-ready 签名 APT 软件源 | APT |
+| Linux Mint 22.x 及更新版本 | Linux Mint/Ubuntu 官方软件源 | APT |
+| Fedora | Fedora 官方软件源 | DNF |
+| Arch Linux | Arch 官方软件源中的 `librime` | Pacman |
+| CachyOS | CachyOS/Arch 官方软件源中的 `librime` | Pacman |
+
+rime-ready 的 Jammy 软件包目前只发布 amd64。使用发行版官方软件源时，可用架构由对应发行版决定。脚本安装后会确认 `rime_deployer` 存在，并拒绝低于 1.8.5 的 librime。部分 Fedora 版本尚未提供 `librime-octagram`，这些版本可以安装雾凇，但选择 `ice-gram` 时脚本会停止并提示改用 `ice`。
+
+只检查识别结果，不安装任何内容：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --check-system
+```
 
 ## Ubuntu 22.04 安装新版雾凇的问题
 
@@ -35,11 +58,11 @@ librime-plugin-octagram
 
 完整的雾凇输入法由三部分组成：
 
-1. **输入法前端**：Ubuntu 提供的 `fcitx5-rime` 或 `ibus-rime`。
-2. **Rime 运行环境**：rime-ready APT 软件源提供的四个新版软件包。
+1. **输入法前端**：发行版提供的 `fcitx5-rime` 或 `ibus-rime`。
+2. **Rime 运行环境**：现代发行版使用官方软件包；Jammy 系统使用 rime-ready 的四个新版软件包。
 3. **用户输入方案**：雾凇配置、可选的万象 Gram，以及部署生成的用户目录文件。
 
-需要完整安装输入法，可以使用后文的一键安装脚本。
+软件源只解决 Rime 运行环境问题，不会下载雾凇配置或万象 Gram。需要完整安装输入法，可以使用后文的一键安装脚本。
 
 ## 通过 APT 软件源安装运行环境
 
@@ -49,7 +72,7 @@ rime-ready 使用 GitHub Pages 发布签名 APT 仓库：
 deb [arch=amd64 signed-by=/usr/share/keyrings/rime-ready-archive-keyring.gpg] https://huffer342-wsh.github.io/rime-ready/apt/ubuntu jammy main
 ```
 
-以下命令适用于 Ubuntu 22.04 amd64。
+以下命令适用于 Ubuntu 22.04 amd64 和基于 Jammy 的 Linux Mint 21.x。
 
 ### 1. 安装下载工具
 
@@ -97,9 +120,9 @@ sudo apt install -y ibus-rime
 
 ## 一键安装雾凇
 
-脚本目前只支持 Ubuntu 22.04 amd64。请以普通桌面用户运行，不要在命令前添加 `sudo`；脚本只在安装系统软件包时自行调用 `sudo`。
+请以普通桌面用户运行，不要在命令前添加 `sudo`；脚本会识别发行版，并只在调用 APT、DNF 或 Pacman 时自行使用 `sudo`。
 
-### 最常用：Fcitx5 + 雾凇
+### 最常用：自动选择前端 + 雾凇
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | bash
@@ -107,13 +130,13 @@ curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/insta
 
 默认执行以下操作：
 
-1. 验证并添加 rime-ready APT 软件源；
-2. 安装四个新版 Rime 软件包；
-3. 安装 Ubuntu 的 `fcitx5-rime`；
+1. 识别发行版和包管理器；
+2. 在 Ubuntu 22.04/Linux Mint 21 添加 rime-ready APT 软件源，其他支持的系统直接使用官方软件源；
+3. 安装新版 Rime 运行库、插件、工具和输入法前端；Fedora 默认选择 IBus，其他系统默认选择 Fcitx5；
 4. 下载稳定版雾凇；
 5. 备份原 Rime 用户目录；
 6. 保留已有的 `rime_ice.userdb` 用户词库；
-7. 部署方案，设置并启动 Fcitx5 Rime。
+7. 部署方案，设置并按需启动所选前端。
 
 ### 参数列表
 
@@ -124,21 +147,23 @@ curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/insta
   bash -s -- <参数>
 ```
 
-| 参数                    | 说明                                                         |
-| ----------------------- | ------------------------------------------------------------ |
-| `--apt`                 | 从 rime-ready APT 软件源安装四个运行库软件包，默认方式。     |
-| `--download`            | 绕过 APT 软件源，从最新 GitHub Release 下载并校验四个 deb。  |
-| `--build`               | 下载固定版本的上游源码，在本机编译并安装四个 deb。           |
-| `--deb <目录/文件/URL>` | 安装指定的 deb 集合；可重复使用。                            |
+| 参数 | 说明 |
+| --- | --- |
+| `--auto` | 自动识别系统，并选择官方软件源或 rime-ready 软件源；默认方式。 |
+| `--apt` | 强制使用 rime-ready APT 软件源，仅支持 Ubuntu 22.04 和基于 Jammy 的 Linux Mint。 |
+| `--download` | 从最新 GitHub Release 下载并校验四个 Jammy deb，仅支持 Jammy 系统。 |
+| `--build` | 下载固定版本的上游源码，在本机编译并安装四个 Jammy deb。 |
+| `--deb <目录/文件/URL>` | 安装指定的 Jammy deb 集合；可重复使用。 |
 | `--preset runtime-only` | 只安装 Rime 运行库和命令行工具，不安装输入法前端和用户方案。 |
-| `--preset ice`          | 安装运行库、输入法前端和稳定版雾凇，默认预设。               |
-| `--preset ice-gram`     | 在 `ice` 基础上安装万象 Gram。                               |
-| `--with-gram`           | `--preset ice-gram` 的简写。                                 |
-| `--frontend fcitx5`     | 使用 Fcitx5 前端，默认值。                                   |
-| `--frontend ibus`       | 使用 IBus 前端。                                             |
-| `--no-activate`         | 安装并部署方案，但不修改或启动当前用户的输入法前端。         |
-| `--no-start`            | 修改输入法设置，但不立即启动前端。                           |
-| `-h`、`--help`          | 显示帮助。                                                   |
+| `--preset ice` | 安装运行库、输入法前端和稳定版雾凇，默认预设。 |
+| `--preset ice-gram` | 在 `ice` 基础上安装万象 Gram。 |
+| `--with-gram` | `--preset ice-gram` 的简写。 |
+| `--frontend fcitx5` | 使用 Fcitx5 前端；除 Fedora 外的默认值。 |
+| `--frontend ibus` | 使用 IBus 前端；Fedora 的默认值。 |
+| `--no-activate` | 安装并部署方案，但不修改或启动当前用户的输入法前端。 |
+| `--no-start` | 修改输入法设置，但不立即启动前端。 |
+| `--check-system` | 只显示识别到的系统、包管理器和运行库来源。 |
+| `-h`、`--help` | 显示帮助。 |
 
 ### 常用组合
 
@@ -205,9 +230,89 @@ curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/insta
 
 `install.sh` 是可独立在线运行的脚本，不依赖仓库中的 `scripts/` 目录。它只通过 `sudo` 修改系统软件包；用户目录中的 Rime 配置始终以当前桌面用户身份修改。
 
+## 让输入法在图形应用中生效
+
+安装前端和方案后，部分 X11、Xwayland、Qt、GTK 或基于 Electron 的窗口仍需要输入法环境变量。先确认当前会话：
+
+```bash
+echo "$XDG_SESSION_TYPE"
+echo "$XDG_CURRENT_DESKTOP"
+```
+
+不要同时设置 IBus 和 Fcitx5 的变量。修改后需要注销并重新登录；只重启终端不会更新已经运行的图形程序。由显示管理器启动桌面时，不建议把这些变量只写进 `.bashrc`，因为图形程序通常不会读取它。
+
+### X11 使用 IBus
+
+可将以下内容写入 `~/.xprofile`；使用 `startx` 时也可以写入 `~/.xinitrc`：
+
+```bash
+export GTK_IM_MODULE=ibus
+export QT_IM_MODULE=ibus
+export XMODIFIERS=@im=ibus
+```
+
+### X11 使用 Fcitx5
+
+Fcitx5 的模块变量值通常仍写作 `fcitx`，不是 `fcitx5`：
+
+```bash
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+```
+
+可将它们写入 `~/.xprofile` 或桌面环境提供的会话环境配置。窗口管理器没有自动启动功能时，还需要启动：
+
+```bash
+fcitx5 -d
+```
+
+### Wayland 使用 IBus
+
+GNOME Wayland 已集成 IBus。优先在“设置 → 键盘 → 输入源”中添加 Rime，不要全局强制设置 `GTK_IM_MODULE=ibus`，否则原生 GTK4 应用可能绕过 Wayland 输入协议。
+
+其他 Wayland 合成器下，原生 Qt 和 Xwayland 应用可能仍需要：
+
+```text
+QT_IM_MODULE=ibus
+QT_IM_MODULES=wayland;ibus
+XMODIFIERS=@im=ibus
+```
+
+不同合成器对 GTK 输入协议和 IBus 启动方式的支持不同；如果仍不能输入，应按照对应合成器和 [IBus ArchWiki](https://wiki.archlinux.org/title/IBus) 的说明设置，不要直接套用 X11 的全部变量。
+
+### Wayland 使用 Fcitx5
+
+原生 Wayland GTK 应用应优先使用 Wayland text-input 协议，因此不要全局设置 `GTK_IM_MODULE=fcitx`。Qt、旧版工具包和 Xwayland 应用可以设置：
+
+```text
+QT_IM_MODULE=fcitx
+QT_IM_MODULES=wayland;fcitx
+XMODIFIERS=@im=fcitx
+```
+
+如果桌面会读取 systemd 用户环境，可以写入 `~/.config/environment.d/90-fcitx5.conf`。该文件不使用 `export`：
+
+```bash
+mkdir -p ~/.config/environment.d
+cat >~/.config/environment.d/90-fcitx5.conf <<'EOF'
+QT_IM_MODULE=fcitx
+QT_IM_MODULES=wayland;fcitx
+XMODIFIERS=@im=fcitx
+EOF
+```
+
+Xwayland GTK3 程序仍不能输入时，可在 `~/.config/gtk-3.0/settings.ini` 的 `[Settings]` 段加入：
+
+```ini
+gtk-im-module=fcitx
+```
+
+KDE Plasma 5.27 及更新版本的 Wayland 会话应在“系统设置 → 键盘 → 虚拟键盘”中选择 **Fcitx 5 Wayland 启动器**，不要再添加普通自启动项。GNOME、KDE、Sway 等环境的完整差异见 [Arch Linux 中文维基：Fcitx 5](https://wiki.archlinuxcn.org/wiki/Fcitx_5)。
+
 ## 软件包说明
 
-APT 仓库和 GitHub Release 都提供以下四个 Ubuntu 同名软件包：
+以下说明只针对 rime-ready 为 Jammy 构建的软件包。APT 仓库和 GitHub Release 都提供四个 Ubuntu 同名软件包：
 
 ```text
 librime1

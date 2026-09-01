@@ -4,13 +4,13 @@
 
 Ubuntu 22.04 提供 librime 1.7.3，而新版雾凇使用了较新的 Lua 模块加载方式。直接使用 Jammy 的 Rime 运行库时，新版方案可能无法正确加载或部署。
 
-rime-ready 不替代 Fcitx5、IBus 或雾凇本身。项目负责构建一组版本匹配的 Rime 运行库和工具，把它们发布为标准 Ubuntu 软件包，并提供可选的用户方案安装流程。
+rime-ready 不替代 Fcitx5、IBus 或雾凇本身。项目为 Ubuntu 22.04 构建一组版本匹配的 Rime 运行库和工具；在 Fedora、Arch、CachyOS、较新的 Ubuntu 和 Linux Mint 上，安装脚本复用发行版官方提供的新版 Rime 软件包。
 
 项目遵循以下原则：
 
 1. librime、Lua 和 Octagram 使用固定且经过同一轮测试的提交；
-2. 系统文件全部由 deb 和 APT 管理，不手工覆盖 `/usr/lib`；
-3. deb 不包含用户配置，也不自动激活输入法；
+2. 系统文件全部由 APT、DNF 或 Pacman 管理，不手工覆盖 `/usr/lib`；
+3. 系统软件包不包含用户配置，也不自动激活输入法；
 4. 用户明确选择预设后，安装脚本才下载和部署雾凇；
 5. GitHub Release 和 APT 仓库只接收通过完整 CT 的产物。
 
@@ -20,11 +20,11 @@ rime-ready 不替代 Fcitx5、IBus 或雾凇本身。项目负责构建一组版
 
 | 来源 | 提供内容 |
 | --- | --- |
-| Ubuntu APT | `fcitx5-rime` 或 `ibus-rime`，以及 glibc、ICU、Boost 等系统依赖。 |
-| rime-ready APT | librime、Lua、Octagram 和版本匹配的命令行工具。 |
+| 发行版官方仓库 | Fcitx5/IBus 前端、系统依赖；在现代发行版上还提供 librime、Lua、Octagram 和工具。 |
+| rime-ready APT | 只为 Ubuntu 22.04 和基于 Jammy 的 Linux Mint 补充新版 Rime 运行环境。 |
 | 雾凇和万象上游 | 用户输入方案、词典和可选 Gram 模型。 |
 
-这三个部分分开发布。升级 Rime 运行库不会覆盖用户词库，安装 deb 也不会修改 Fcitx5/IBus 的当前配置。
+这些部分分开发布。升级 Rime 运行库不会覆盖用户词库，安装系统软件包也不会修改 Fcitx5/IBus 的当前配置。
 
 ## 构建数据流
 
@@ -93,14 +93,20 @@ stage 模拟软件包安装后的根目录。编译步骤不会直接覆盖宿�
 
 ```mermaid
 flowchart TD
-    E[检查 Ubuntu 22.04 amd64] --> K[下载 APT 公钥]
-    K --> R[添加 rime-ready 软件源]
-    R --> L[安装四个 Rime 软件包]
+    E[读取 /etc/os-release] --> D{发行版和版本}
+    D -->|Ubuntu 22.04 / Mint 21| K[添加 rime-ready APT 软件源]
+    D -->|Ubuntu 24+ / Mint 22+| A[使用官方 APT]
+    D -->|Fedora| F[使用 DNF]
+    D -->|Arch / CachyOS| P[使用 Pacman]
+    K --> L[安装并检查 librime >= 1.8.5]
+    A --> L
+    F --> L
+    P --> L
     L --> Q{preset}
     Q -->|runtime-only| X[结束]
-    Q -->|ice / ice-gram| F[安装 Fcitx5 或 IBus]
-    F --> I[下载并备份部署雾凇]
-    I --> G{ice-gram?}
+    Q -->|ice / ice-gram| I[安装 Fcitx5 或 IBus]
+    I --> B[下载、备份并部署雾凇]
+    B --> G{ice-gram?}
     G -->|是| M[下载或复用万象 Gram]
     G -->|否| U[编译用户方案]
     M --> U
@@ -109,9 +115,13 @@ flowchart TD
     N -->|是| Z[保留现有前端配置]
 ```
 
-系统软件包通过 `sudo apt` 安装。雾凇目录和输入法配置始终以当前桌面用户身份写入。
+系统软件包通过 `sudo apt`、`sudo dnf` 或 `sudo pacman` 安装。雾凇目录和输入法配置始终以当前桌面用户身份写入。
+
+系统识别使用 `/etc/os-release`：Ubuntu 和 Linux Mint 根据 Ubuntu 基线选择 APT 来源，Fedora 使用 DNF，Arch、CachyOS 及 `ID_LIKE=arch` 的系统使用 Pacman。`--download`、`--build` 和 `--deb` 仍只处理 Jammy deb。
 
 更新雾凇前，脚本将原目录重命名为带时间戳的备份目录，并将已有的 `rime_ice.userdb` 复制到新目录。它不会尝试合并其他任意 YAML 配置。
+
+脚本会更新 Fcitx5 profile，并在系统提供 `im-config` 时调用它，但不会在所有发行版上统一写入 `GTK_IM_MODULE`、`QT_IM_MODULE` 和 `XMODIFIERS`。X11、原生 Wayland、Xwayland、GNOME 和 KDE 对这些变量的要求不同，全局写入 X11 配置可能破坏原生 Wayland 输入。README 按会话类型给出配置方法。
 
 ## APT 仓库设计
 
@@ -178,14 +188,15 @@ Lua 和 Octagram 没有项目采用的稳定 Release，因此自动任务不会�
 
 完整 CT 包含：
 
-1. librime 上游单元测试；
-2. 核心库、插件和命令行工具的动态依赖检查；
-3. 四个 deb 的文件、版本和依赖检查；
-4. Lintian error 检查；
-5. APT 仓库目录、索引、By-Hash 和公钥检查；
-6. Fcitx5 和 IBus 加载新版 `librime.so.1` 的 ABI 检查；
-7. 雾凇部署产物检查；
-8. Rime API 输入输出测试：输入 `nihao`，确认候选和提交文本包含“你好”。
+1. Ubuntu、Linux Mint、Fedora、Arch 和 CachyOS 的识别与包管理器路由测试；
+2. librime 上游单元测试；
+3. 核心库、插件和命令行工具的动态依赖检查；
+4. 四个 deb 的文件、版本和依赖检查；
+5. Lintian error 检查；
+6. APT 仓库目录、索引、By-Hash 和公钥检查；
+7. Fcitx5 和 IBus 加载新版 `librime.so.1` 的 ABI 检查；
+8. 雾凇部署产物检查；
+9. Rime API 输入输出测试：输入 `nihao`，确认候选和提交文本包含“你好”。
 
 测试会先安装 Ubuntu 官方前端，再用本地 deb 升级四个 Rime 包，以覆盖真实用户的升级路径。
 

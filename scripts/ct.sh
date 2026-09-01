@@ -39,6 +39,7 @@ fi
 
 log "检查 Shell 脚本"
 shellcheck "$PROJECT_ROOT/install.sh" "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR/lib"/*.sh
+"$SCRIPT_DIR/test-installer-detection.sh"
 
 log "运行 Rime 单元测试和产物测试"
 "$SCRIPT_DIR/test-build.sh" "$target"
