@@ -250,30 +250,51 @@ SH
 }
 
 download_release_debs() {
-  local arch sums_url url deb expected
+  local arch latest_url tag sums_url url deb expected
   local -a urls
   sudo apt-get update
   sudo apt-get install -y ca-certificates curl python3
   arch=$(dpkg --print-architecture)
-  curl -fsSL https://api.github.com/repos/Huffer342-WSH/rime-ready/releases/latest \
-    -o "$tmp/release.json" || die "当前还没有可下载的 GitHub Release"
-  mapfile -t urls < <(python3 - "$arch" "$tmp/release.json" <<'PY'
-import json
+  latest_url=$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+    https://github.com/Huffer342-WSH/rime-ready/releases/latest) ||
+    die "无法查询最新 GitHub Release"
+  tag=${latest_url##*/}
+  [[ -n $tag && $tag != latest ]] || die "当前还没有可下载的 GitHub Release"
+  curl -fsSL \
+    "https://github.com/Huffer342-WSH/rime-ready/releases/expanded_assets/$tag" \
+    -o "$tmp/release-assets.html" || die "无法读取 GitHub Release 资源列表"
+  python3 - "$arch" "$tag" "$tmp/release-assets.html" >"$tmp/release-urls" <<'PY'
+from html.parser import HTMLParser
+from pathlib import Path
 import sys
-arch = sys.argv[1]
-with open(sys.argv[2]) as f:
-    data = json.load(f)
+
+arch, tag, page = sys.argv[1:]
+prefix = f"/Huffer342-WSH/rime-ready/releases/download/{tag}/"
 names = {"librime1", "librime-bin", "librime-plugin-lua", "librime-plugin-octagram"}
-assets = [a for a in data["assets"] if a["name"].endswith(f"_{arch}.deb")
-          and a["name"].split("_", 1)[0] in names]
-if len(assets) != 4:
-    raise SystemExit(f"expected 4 deb assets, got {len(assets)}")
-for asset in assets:
-    print(asset["browser_download_url"])
-sums = next(a for a in data["assets"] if a["name"] == "SHA256SUMS-ubuntu-22.04")
-print(sums["browser_download_url"])
+
+class Links(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.hrefs = []
+
+    def handle_starttag(self, _tag, attrs):
+        href = dict(attrs).get("href", "")
+        if href.startswith(prefix):
+            self.hrefs.append(href)
+
+links = Links()
+links.feed(Path(page).read_text())
+debs = [href for href in links.hrefs
+        if href.endswith(f"_{arch}.deb")
+        and href.removeprefix(prefix).split("_", 1)[0] in names]
+sums = [href for href in links.hrefs
+        if href.removeprefix(prefix) == "SHA256SUMS-ubuntu-22.04"]
+if len(debs) != 4 or len(sums) != 1:
+    raise SystemExit(f"expected 4 deb assets and one checksum, got {len(debs)} and {len(sums)}")
+for href in debs + sums:
+    print(f"https://github.com{href}")
 PY
-  )
+  mapfile -t urls <"$tmp/release-urls"
   sums_url=${urls[-1]}
   unset 'urls[-1]'
   for url in "${urls[@]}"; do
