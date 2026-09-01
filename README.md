@@ -15,35 +15,52 @@
 
 ## 一键安装
 
-目前只支持 Ubuntu 22.04 amd64。克隆仓库后，以普通桌面用户运行：
+目前只支持 Ubuntu 22.04 amd64。以普通桌面用户运行下面的命令，不要先加 `sudo`；脚本会在安装 APT 软件包时自行调用 `sudo`：
 
 ```bash
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | bash
 ```
 
-默认从最新 GitHub Release 下载并校验四个标准 deb，然后使用 `ice` 预设：安装 Ubuntu 的 Fcitx5 Rime 前端、安装稳定版雾凇、编译方案、设置并启动输入法。常用预设：
+`install.sh` 已包含下载 deb、源码编译、安装雾凇和设置输入法所需的全部逻辑，不依赖仓库中的 `scripts/` 目录。默认从最新 GitHub Release 下载并校验四个标准 deb，然后使用 `ice` 预设：安装 Ubuntu 的 Fcitx5 Rime 前端、安装稳定版雾凇、编译方案、设置并启动输入法。
+
+给在线脚本传参时，把参数写在 `bash -s --` 后面：
 
 ```bash
-./install.sh --preset runtime-only  # 只安装运行库和命令行应用
-./install.sh --preset ice           # Fcitx5 + 雾凇（默认）
-./install.sh --preset ice-gram      # Fcitx5 + 雾凇 + 万象 Gram
-./install.sh --preset ice --frontend ibus
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset runtime-only
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset ice-gram
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset ice --frontend ibus
 ```
 
 用户配置控制：
 
 ```bash
-./install.sh --preset ice --no-activate  # 安装方案但不修改输入法设置
-./install.sh --preset ice --no-start     # 设置输入法但不立即启动前端
+# 安装方案，但不修改输入法设置
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset ice --no-activate
+
+# 设置输入法，但不立即启动前端
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --preset ice --no-start
 ```
 
-需要本机编译时显式使用：
+需要本机编译固定版本的 Rime 时使用 `--build`。编译过程不需要先克隆本仓库，但会下载上游源码并安装编译依赖：
 
 ```bash
-./install.sh --build --preset ice
+curl -fsSL https://raw.githubusercontent.com/Huffer342-WSH/rime-ready/main/install.sh | \
+  bash -s -- --build --preset ice
 ```
 
-也可以安装指定的本地或远程 deb：
+也可以克隆仓库后执行同一个脚本：
+
+```bash
+./install.sh
+./install.sh --preset ice-gram
+```
+
+安装指定的本地或远程 deb 时，使用已克隆仓库中的脚本更方便：
 
 ```bash
 ./install.sh --deb ./dist --preset runtime-only
