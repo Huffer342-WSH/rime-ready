@@ -1,0 +1,79 @@
+name: Publish APT repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'GitHub Release tag; leave empty to use the latest release'
+        required: false
+        type: string
+      target:
+        description: 'Platform target whose debs are in the release'
+        required: true
+        default: ubuntu-22.04
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download tested debs from GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag=$INPUT_TAG
+          if [[ -z $tag ]]; then
+            tag=$(gh release view --json tagName --jq .tagName)
+          fi
+          # shellcheck disable=SC1090
+          source "platforms/${{ inputs.target }}/platform.env"
+          mkdir release-debs
+          gh release download "$tag" --dir release-debs --pattern "$RELEASE_DEB_PATTERN"
+          echo "Publishing $tag for ${{ inputs.target }}"
+      - name: Install APT repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils dpkg-dev gnupg xz-utils
+      - name: Import APT signing key
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          [[ -n "$APT_GPG_PRIVATE_KEY" ]] || {
+            echo "Missing APT_GPG_PRIVATE_KEY repository secret" >&2
+            exit 1
+          }
+          echo "$APT_GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+          signing_key=$(cat packaging/apt/signing-key.fingerprint)
+          gpg --batch --list-secret-keys "$signing_key" >/dev/null
+          echo "signing_key=$signing_key" >> "$GITHUB_ENV"
+      - name: Update APT repository branch
+        run: |
+          if git ls-remote --exit-code --heads origin apt-repository >/dev/null 2>&1; then
+            git fetch origin apt-repository
+            git worktree add -B apt-repository /tmp/apt-repository origin/apt-repository
+          else
+            git worktree add --detach /tmp/apt-repository HEAD
+            (
+              cd /tmp/apt-repository
+              git switch --orphan apt-repository
+              git rm -rf .
+            )
+          fi
+          scripts/publish-apt-repository.sh \
+            --target "${{ inputs.target }}" \
+            --dist-dir release-debs \
+            --repository-root /tmp/apt-repository \
+            --signing-key "$signing_key"
+          (
+            cd /tmp/apt-repository
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add --all
+            git commit -m "Publish APT repository from ${{ inputs.tag || 'latest release' }}"
+            git push origin HEAD:apt-repository
+          )
